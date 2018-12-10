@@ -38,26 +38,8 @@ var sequelize = new Sequelize({
 
 var myStore = new SequelizeStore({
     db: sequelize,
-    expiration: 24 * 60 * 60 * 1000 * 30  // The maximum age (in milliseconds) of a valid session.
+    expiration: 24 * 60 * 60 * 1000 * 30,  // The maximum age (in milliseconds) of a valid session.
 })
-
-// console.log(myStore);
-// var sessionStore = new pgSession({
-//     host: 'localhost',
-//     port: 5432,
-//     user: 'postgres',
-//     password: 'thelight136497',
-//     database: 'forestnetwork',
-//     createDatabaseTable: true,
-//     schema: {
-//         tableName: 'sessions',
-//         columnNames: {
-//             session_id: 'session_id',
-//             expires: 'expires',
-//             data: 'data'
-//         }
-//     }
-// });
 
 app.use(session({
     key: 'session_cookie_name',
@@ -67,6 +49,8 @@ app.use(session({
     saveUninitialized: false,
     cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
 }));
+
+myStore.sync();
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
