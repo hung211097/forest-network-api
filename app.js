@@ -4,6 +4,10 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
+var Sequelize = require('sequelize');
+var session = require('express-session');
+var SequelizeStore = require('connect-session-sequelize')(session.Store);
+
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
@@ -18,6 +22,51 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+//session
+var sequelize = new Sequelize({
+    uri: '',
+    database: 'forestnetwork',
+    username: 'postgres',
+    password: 'thelight136497',
+    host: 'localhost',
+    port: 5432,
+    dialect: 'postgres',
+    operatorsAliases: false,
+    protocol: 'postgres'
+});
+
+var myStore = new SequelizeStore({
+    db: sequelize,
+    expiration: 24 * 60 * 60 * 1000 * 30  // The maximum age (in milliseconds) of a valid session.
+})
+
+// console.log(myStore);
+// var sessionStore = new pgSession({
+//     host: 'localhost',
+//     port: 5432,
+//     user: 'postgres',
+//     password: 'thelight136497',
+//     database: 'forestnetwork',
+//     createDatabaseTable: true,
+//     schema: {
+//         tableName: 'sessions',
+//         columnNames: {
+//             session_id: 'session_id',
+//             expires: 'expires',
+//             data: 'data'
+//         }
+//     }
+// });
+
+app.use(session({
+    key: 'session_cookie_name',
+    secret: 'session_cookie_secret',
+    store: myStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
+}));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
