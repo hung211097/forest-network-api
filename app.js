@@ -7,9 +7,12 @@ var logger = require('morgan');
 var Sequelize = require('sequelize');
 var session = require('express-session');
 var SequelizeStore = require('connect-session-sequelize')(session.Store);
+var dbConfig = require('./settingDev').databaseConfig;
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var loginRouter = require('./routes/login');
+var transactionRouter = require('./routes/transactions');
 
 var app = express();
 
@@ -24,17 +27,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 //session
-var sequelize = new Sequelize({
-    uri: '',
-    database: 'forestnetwork',
-    username: 'postgres',
-    password: 'thelight136497',
-    host: 'localhost',
-    port: 5432,
-    dialect: 'postgres',
-    operatorsAliases: false,
-    protocol: 'postgres'
-});
+var sequelize = new Sequelize(dbConfig);
 
 var myStore = new SequelizeStore({
     db: sequelize,
@@ -54,6 +47,8 @@ myStore.sync();
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/login', loginRouter);
+app.use('/transactions', transactionRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -1,8 +1,11 @@
 const db = require('../config/config');
 const user = db.user;
 
-exports.getAllUser = () => {
-    return user.findAll().then((users) => {
+exports.getUsers = (query) => {
+    return user.findAll({
+      limit: query.limit,
+      offset: (query.page - 1) * query.limit,
+    }).then((users) => {
         return users;
     }).catch(e => {return null})
 }
