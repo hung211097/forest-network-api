@@ -3,7 +3,10 @@ module.exports = (sequelize, DataTypes) => {
       public_key: {type: DataTypes.STRING, allowNull: false, primaryKey: true},
       tendermint_address: {type: DataTypes.STRING, allowNull: true},
       username: {type: DataTypes.STRING, allowNull: false},
-      sequence: {type: DataTypes.INTEGER, allowNull: false}
+      sequence: {type: DataTypes.INTEGER, allowNull: false},
+      amount: {type: DataTypes.BIGINT, allowNull: false, defaultValue: 0},
+      bandwith: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+      bandwithTime: {type: DataTypes.DATE, allowNull: true }
     },
     {
       charset: 'utf8',

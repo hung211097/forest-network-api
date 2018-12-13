@@ -26,7 +26,7 @@ router.get('/', function(req, res, next) {
     if(data){
      return res.status(200).json({
        length: data.length,
-       users: data
+       transaction: data
      })
    }
    return res.status(404)
