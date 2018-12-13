@@ -2,6 +2,7 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
 var logger = require('morgan');
 var cors = require('cors');
 
@@ -13,6 +14,7 @@ var dbConfig = require('./settingDev').databaseConfig;
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var loginRouter = require('./routes/login');
+var registerRouter = require('./routes/register');
 var transactionRouter = require('./routes/transactions');
 
 var app = express();
@@ -26,7 +28,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+    extended: false
+}));
 //session
 var sequelize = new Sequelize(dbConfig);
 
@@ -49,6 +54,7 @@ myStore.sync();
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/login', loginRouter);
+app.use('/register', registerRouter);
 app.use('/transactions', transactionRouter);
 
 // catch 404 and forward to error handler

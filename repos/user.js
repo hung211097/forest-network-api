@@ -9,3 +9,13 @@ exports.getUsers = (query) => {
         return users;
     }).catch(e => {return null})
 }
+
+exports.getInfoUser = (public_key) => {
+    return user.findOne({
+      where: {
+        public_key: public_key
+      }
+    }).then((user) => {
+        return user;
+    }).catch(e => {return null})
+}

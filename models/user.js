@@ -6,7 +6,8 @@ module.exports = (sequelize, DataTypes) => {
       sequence: {type: DataTypes.INTEGER, allowNull: false},
       amount: {type: DataTypes.BIGINT, allowNull: false, defaultValue: 0},
       bandwith: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
-      bandwithTime: {type: DataTypes.DATE, allowNull: true }
+      bandwithMax: {type: DataTypes.INTEGER, allowNull: false },
+      bandwithTime: {type: DataTypes.DATE, allowNull: false }
     },
     {
       charset: 'utf8',

@@ -19,7 +19,8 @@ const Users = db.define('Users', {
   sequence: {type: Sequelize.INTEGER, allowNull: false},
   amount: {type: Sequelize.BIGINT, allowNull: false, defaultValue: 0},
   bandwith: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
-  bandwithTime: {type: Sequelize.DATE, allowNull: true }
+  bandwithMax: {type: Sequelize.INTEGER, allowNull: false },
+  bandwithTime: {type: Sequelize.DATE, allowNull: false }
 })
 
 const Transactions = db.define('Transactions', {
@@ -35,9 +36,9 @@ const Info = db.define('Blockchains', {
   height: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true},
 })
 
-const client = RpcClient('https://gorilla.forest.network:443/websocket')
 
 const FetchData = () => {
+  const client = RpcClient('https://komodo.forest.network:443')
   let fromBlock = 0;
   let toBlock;
   client.block().then((res) => {
@@ -52,21 +53,28 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 1; i <= 500; i++){
+    for(let i = 3645; i <= 3645; i++){
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
+      // result.forEach((item) => {
+      //   if(item.block.data.txs){
+      //     const buf = Buffer.from(item.block.data.txs[0], 'base64')
+      //     const deData = decode(buf)
+      //     console.log(deData);
+      //   }
+      // })
+
       startImportDB(result)
     }).catch(e => console.log("ERROR PROMISE", e))
   })
 }
 
-
 // db.sync();
 
-// FetchData()
-// { query: "tm.events.type = 'NewBlock'" }
-// client.subscribe({ event: 'NewBlock' }, (err, event) => {
+FetchData()
+// const client = RpcClient('wss://komodo.forest.network:443')
+// client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
 //   console.log("OK");
 //   console.log(err, event)
 // }).catch(e => console.log("ERROR", e))
@@ -75,6 +83,7 @@ async function asyncForEach(array, callback) {
   for (let index = 0; index < array.length; index++) {
     await callback(array[index], index);
   }
+  console.log("OVER");
 }
 
 const startImportDB = async (result) => {
@@ -91,7 +100,8 @@ const startImportDB = async (result) => {
               tendermint_address: '',
               username: "User " + (index + 1),
               sequence: 0,
-              bandwithTime: item.block.header.time
+              bandwithTime: item.block.header.time,
+              bandwithMax: 0
             })
             await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)
@@ -152,22 +162,24 @@ async function adjustBandwith(deData, time, txBase64){
       const txSize = txBase64.length
       const currentTime = time
       let diff = BANDWIDTH_PERIOD
-
+      console.log("CURRENT", moment(currentTime).unix());
+      console.log("LAST TIME", moment(account.bandwithTime).unix());
       if(account.bandwithTime && account.sequence !== 1){
+        console.log("MINUS", moment(currentTime).unix() - moment(account.bandwithTime).unix());
         if(moment(currentTime).unix() - moment(account.bandwithTime).unix() < BANDWIDTH_PERIOD){
           diff = moment(currentTime).unix() - moment(account.bandwithTime).unix()
         }
       }
       const bandwidthLimit = Math.ceil(account.amount / MAX_CELLULOSE * NETWORK_BANDWIDTH)
       // 24 hours window max 65kB
-      // console.log("ACCOUNT", account);
-      // console.log("DIFF", diff);
-      // console.log("bandwidthLimit", bandwidthLimit);
-      // console.log("TX", txSize);
+      console.log("ACCOUNT", account);
+      console.log("DIFF", diff);
+      console.log("bandwidthLimit", bandwidthLimit);
+      console.log("TX", txSize);
 
       const bandwidthConsume = Math.ceil(Math.max(0, (BANDWIDTH_PERIOD - diff) / BANDWIDTH_PERIOD) * account.bandwith + txSize)
 
-      // console.log("bandwidthConsume", bandwidthConsume);
+      console.log("bandwidthConsume", bandwidthConsume);
 
       // if (account.bandwidth > bandwidthLimit) {
       //   return
@@ -175,7 +187,8 @@ async function adjustBandwith(deData, time, txBase64){
       // Check bandwidth
       return Users.update({
         bandwithTime: time,
-        bandwith: bandwidthConsume
+        bandwith: bandwidthConsume,
+        bandwithMax: Math.ceil(account.amount * NETWORK_BANDWIDTH / MAX_CELLULOSE)
       },
       {
         where: {
