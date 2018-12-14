@@ -10,6 +10,7 @@ var Sequelize = require('sequelize');
 var session = require('express-session');
 var SequelizeStore = require('connect-session-sequelize')(session.Store);
 var dbConfig = require('./settingDev').databaseConfig;
+var StartWebSocket = require('./websocket')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -50,6 +51,7 @@ app.use(session({
 }));
 
 myStore.sync();
+StartWebSocket();
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
