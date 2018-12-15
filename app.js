@@ -64,7 +64,7 @@ app.use(session({
 }));
 
 myStore.sync();
-StartWebSocket();
+StartWebSocket(); //Chạy web socket bắt thay đổi của height blockchain -> hiện chỉ bắt, ko update db vì db chưa hoàn chỉnh
 
 app.use(handleLayoutMDW);
 

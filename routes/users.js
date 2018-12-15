@@ -76,7 +76,6 @@ router.get('/:public_key', function(req, res, next) {
 
 router.get('/:public_key/transactions', function(req, res, next) {
   let key = req.params.public_key
-
   let defaultQuery = {
     page: 1,
     limit: 10,
@@ -99,8 +98,10 @@ router.get('/:public_key/transactions', function(req, res, next) {
   transactionRepos.getTransactionsOfUser(defaultQuery, key).then((data) => {
     if(data){
      return res.status(200).json({
-       length: data.length,
-       transaction: data,
+       length: data.transactions.length,
+       transactions: data.transactions,
+       total_page: data.total_page,
+       total_item: data.total_item,
        status: 'success'
      })
    }
