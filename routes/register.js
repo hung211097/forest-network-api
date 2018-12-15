@@ -7,10 +7,11 @@ const transaction = require('../lib/transaction/index')
 const { RpcClient } = require('tendermint')
 const private = require('../settingDev').private_key;
 const public_me = require('../settingDev').public_key;
+const node_url = require('../settingDev').node_url;
 
 router.post('/', function(req, res, next) {
   const key = Keypair.random();
-  const client = RpcClient('https://komodo.forest.network:443')
+  const client = RpcClient(node_url)
   let result = {
     secret_key: key.secret(),
     public_key: key.publicKey(),
@@ -21,7 +22,7 @@ router.post('/', function(req, res, next) {
   userRepos.getInfoUser(public_me).then((info) => {
     const tx = {
       version: 1,
-      sequence: info.sequence + 5,
+      sequence: info.sequence + 1,
       memo: Buffer.alloc(0),
       account: public_me,
       operation: "create_account",

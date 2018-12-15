@@ -13,7 +13,8 @@ const NETWORK_BANDWIDTH = BANDWIDTH_PERIOD * 22020096;
 // }).catch(e => console.log(e))
 
 const Users = db.define('Users', {
-  public_key: {type: Sequelize.STRING, allowNull: false, primaryKey: true},
+  user_id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
+  public_key: {type: Sequelize.STRING, allowNull: false},
   tendermint_address: {type: Sequelize.STRING, allowNull: true},
   username: {type: Sequelize.STRING, allowNull: false},
   sequence: {type: Sequelize.INTEGER, allowNull: false},
@@ -53,7 +54,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 3001; i <= 3500; i++){
+    for(let i = 5501; i <= 6000; i++){
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -73,11 +74,11 @@ const FetchData = () => {
 // db.sync();
 
 // FetchData()
-const client = RpcClient('wss://komodo.forest.network:443')
-client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
-  console.log("OK");
-  console.log(err, event)
-}).catch(e => console.log("ERROR", e))
+// const client = RpcClient('wss://komodo.forest.network:443')
+// client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
+//   console.log("OK");
+//   console.log(err, event)
+// }).catch(e => console.log("ERROR", e))
 
 async function asyncForEach(array, callback) {
   for (let index = 0; index < array.length; index++) {

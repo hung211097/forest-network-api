@@ -26,11 +26,29 @@ router.get('/', function(req, res, next) {
     if(data){
      return res.status(200).json({
        length: data.length,
-       transaction: data
+       transaction: data,
+       status: 'success'
      })
    }
-   return res.status(404)
+   return res.status(200).json({
+     status: 'failed'
+   })
   })
 });
+
+router.post('/conduct', function(req, res, next) {
+  if(req.body && req.body.hex){
+    transactionRepos.conductTransaction(req.body.hex).then((data) => {
+      return res.status(200).json({
+        status: data
+      })
+    })
+  }
+  else{
+    return res.status(200).json({
+      status: 'failed'
+    })
+  }
+})
 
 module.exports = router;

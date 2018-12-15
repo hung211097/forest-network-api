@@ -1,5 +1,9 @@
 const db = require('../config/config');
 const transaction = db.transaction;
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
+const { RpcClient } = require('tendermint')
+const node_url = require('../settingDev').node_url;
 
 exports.getTransactions = (query) => {
     return transaction.findAll({
@@ -24,4 +28,16 @@ exports.getTransactionsOfUser = (query, public_key) => {
     }).then((transactions) => {
         return transactions;
     }).catch(e => {return null})
+}
+
+exports.conductTransaction = (hex) => {
+    const client = RpcClient(node_url)
+    return client.broadcastTxCommit({tx: hex}).then((res) => {
+      if(+res.height !== 0){
+        return 'success'
+      }
+      return 'failed'
+    }).catch(e => {
+      return 'failed'
+    })
 }

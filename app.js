@@ -11,16 +11,23 @@ var session = require('express-session');
 var SequelizeStore = require('connect-session-sequelize')(session.Store);
 var dbConfig = require('./settingDev').databaseConfig;
 var StartWebSocket = require('./websocket')
+var handleLayoutMDW = require('./middleware/handle-layout');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var loginRouter = require('./routes/login');
+var logoutRouter = require('./routes/logout');
 var registerRouter = require('./routes/register');
 var transactionRouter = require('./routes/transactions');
 
 var app = express();
-app.use(cors());
-// view engine setup
+app.use(cors({
+  credentials: true,
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH', 'OPTION'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204
+}));
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
 
@@ -47,15 +54,24 @@ app.use(session({
     store: myStore,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
+    rolling: true,
+    unset: 'destroy',
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: false,
+      secure: false
+    }, // 30 days
 }));
 
 myStore.sync();
 StartWebSocket();
 
+app.use(handleLayoutMDW);
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/login', loginRouter);
+app.use('/logout', logoutRouter);
 app.use('/register', registerRouter);
 app.use('/transactions', transactionRouter);
 

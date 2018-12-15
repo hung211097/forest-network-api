@@ -8,6 +8,7 @@ exports.getUsers = (query) => {
     return user.findAll({
       limit: query.limit,
       offset: (query.page - 1) * query.limit,
+      order: query.order && query.type ? [[query.order, query.type]] : [],
     }).then((users) => {
         return users;
     }).catch(e => {return null})

@@ -3,6 +3,8 @@ const moment = require('moment');
 const { RpcClient } = require('tendermint')
 const { encode, decode, verify, sign, hash } = require('../lib/transaction')
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH } = require('../constants')
+const websocket_url = require('../settingDev').node_url_websocket;
+const node_url = require('../settingDev').node_url;
 
 const Users = db.user;
 const Transactions = db.transaction;
@@ -10,7 +12,7 @@ const Info = db.blockchain;
 
 const FetchData = (newBlock) => {
   console.log("BEGIN ADD NEW DATA");
-  const fetch = RpcClient('https://komodo.forest.network:443')
+  const fetch = RpcClient(node_url)
   let fromBlock = 0;
   let toBlock = newBlock.header.height;
   toBlock = +res.block_meta.header.height
@@ -34,7 +36,7 @@ const FetchData = (newBlock) => {
 }
 
 const StartWebSocket = () => {
-  const client = RpcClient('wss://komodo.forest.network:443')
+  const client = RpcClient(websocket_url)
   client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
     // FetchData(newBlock)
     console.log(err, event)
