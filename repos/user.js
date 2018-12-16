@@ -1,5 +1,5 @@
 const db = require('../config/config');
-const user = db.user;
+const user = db.Users;
 const publicKey = require('../settingDev').public_key;
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH} = require('../constants')
 const moment = require('moment')
