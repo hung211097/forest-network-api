@@ -2,8 +2,8 @@ module.exports = (sequelize, DataTypes) => {
     const user = sequelize.define('Users', {
       user_id: {type: DataTypes.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
       public_key: {type: DataTypes.STRING, allowNull: false},
-      tendermint_address: {type: DataTypes.STRING, allowNull: true},
       username: {type: DataTypes.STRING, allowNull: false},
+      avatar: {type: DataTypes.TEXT, allowNull: true},
       sequence: {type: DataTypes.INTEGER, allowNull: false},
       amount: {type: DataTypes.BIGINT, allowNull: false, defaultValue: 0},
       bandwith: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
@@ -15,5 +15,11 @@ module.exports = (sequelize, DataTypes) => {
       collate: 'utf8_unicode_ci',
       tableName: 'Users',
     });
+
+    user.associate = (models) => {
+      user.hasMany(models.Transactions, {foreignKey: 'user_id'})
+      user.hasMany(models.Posts, {foreignKey: 'user_id'})
+      user.hasMany(models.Comments, {foreignKey: 'user_id'})
+    }
     return user;
 };

@@ -6,9 +6,12 @@ const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH } = require('../const
 const websocket_url = require('../settingDev').node_url_websocket;
 const node_url = require('../settingDev').node_url;
 
-const Users = db.user;
-const Transactions = db.transaction;
-const Info = db.blockchain;
+const Users = db.Users;
+const Transactions = db.Transactions;
+const Info = db.Info;
+const Posts = db.Posts;
+const Comments = db.Comments;
+const Follows = db.Follows;
 
 const FetchData = (newBlock) => {
   console.log("BEGIN ADD NEW DATA");
@@ -77,6 +80,17 @@ const startImportDB = async (result) => {
             await adjustAmount(deData, true)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], true)
+            break
+          case 'update_account':
+            let key = deData.params.key
+            if(key === 'name' || key === 'picture' || key === 'followings'){
+              await updateAccount(deData)
+              await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            }
+            break
+          case 'post':
+            await createPost(deData, item.block.header.time)
+            await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             break
           default:
             break
@@ -161,6 +175,63 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
       }
     }
   }).catch(e => console.log("ERROR FIND USER", e))
+}
+
+async function updateAccount(deData){
+  switch(deData.params.key)
+  {
+    case 'name':
+      return Users.update({
+        username: deData.params.value.toString('utf8')
+      },{
+        where: {
+          public_key: deData.account
+        }
+      }).then(() => {}).catch(e => console.log("ERROR UPDATE NAME", e))
+    case 'picture':
+      return Users.update({
+        avatar: 'data:image/jpeg;base64,' + deData.params.value.toString('base64')
+      },{
+        where: {
+          public_key: deData.account
+        }
+      }).then(() => {}).catch(e => console.log("ERROR UPDATE PICTURE", e))
+      break;
+    case 'followings':
+      let arr = JSON.parse(deData.params.value.toString('utf8')).addresses
+      asyncForEach(arr, async (item, index) => {
+        await Follows.create({
+         public_key_follower: deData.account,
+         public_key_following: Buffer.from(item.data, 'base32').toString()
+       }).then(() => {}).catch(e => console.log("ERROR CREATE FOLLOWINGS", e))
+      })
+      break;
+    default:
+      break;
+  }
+}
+
+async function createPost(deData, time){
+  return Users.findOne({
+    where: {
+      public_key: deData.account
+    }
+  }).then((user) => {
+    if(user){
+      let content = null
+      try{
+        content = JSON.parse(deData.params.content.toString('utf8'))
+      }
+      catch(e){
+        return
+      }
+      return Posts.create({
+        user_id: user.user_id,
+        content: content.text,
+        created_at: time
+      }).then(() => {}).catch(e => console.log("ERROR CREATE POST", e))
+    }
+  }).catch(e => console.log("ERROR", e))
 }
 
 module.exports = StartWebSocket;
