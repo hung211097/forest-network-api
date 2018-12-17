@@ -1,7 +1,7 @@
 const setting = {
   databaseConfig: {
     uri: '',
-    database: 'forestnetwork',
+    database: 'demoDB',
     username: 'postgres',
     password: 'thelight136497',
     host: 'localhost',

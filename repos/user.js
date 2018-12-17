@@ -3,6 +3,8 @@ const user = db.Users;
 const publicKey = require('../settingDev').public_key;
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH} = require('../constants')
 const moment = require('moment')
+const { RpcClient } = require('tendermint')
+const node_url = require('../settingDev').node_url;
 
 exports.getUsers = (query) => {
     return user.findAll({
@@ -22,6 +24,18 @@ exports.getInfoUser = (public_key) => {
     }).then((user) => {
         return user;
     }).catch(e => {return null})
+}
+
+exports.updateProfile = (hex) => {
+  const client = RpcClient(node_url)
+  return client.broadcastTxCommit({tx: hex}).then((res) => {
+    if(+res.height !== 0){
+      return 'success'
+    }
+    return 'failed'
+  }).catch(e => {
+    return 'failed'
+  })
 }
 
 exports.checkIfEnoughOXY = (publicKey, txString64, timeNewTransaction) => {

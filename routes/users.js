@@ -3,6 +3,19 @@ var router = express.Router();
 var userRepos = require('../repos/user')
 var transactionRepos = require('../repos/transaction')
 
+async function asyncForEach(array, obj, callback) {
+  for (let index = 0; index < array.length; index++) {
+    await callback(obj[array[index]], array[index]);
+  }
+}
+
+async function pushCheckUpdate(arr, obj){
+  await asyncForEach(Object.keys(obj), obj, async (hex, key) => {
+    let flag = await userRepos.updateProfile(hex)
+    arr.push({key: key, value: flag})
+  })
+}
+
 /* GET users listing. */
 router.get('/', function(req, res, next) {
   let defaultQuery = {
@@ -38,6 +51,20 @@ router.get('/', function(req, res, next) {
   })
 });
 
+router.post('/update-profile', async function(req, res, next) {
+  if(req.body && req.body.data){
+    let arrRes = []
+    await pushCheckUpdate(arrRes, req.body.data)
+    return res.status(200).json({
+      result: arrRes,
+      status: 'success'
+    })
+  }
+  return res.status(200).json({
+    status: 'failed'
+  })
+});
+
 router.get('/me', function(req, res, next) {
   if(req.session && req.session.public_key && req.session.isLogged){
     userRepos.getInfoUser(req.session.public_key).then((data) => {
@@ -58,7 +85,7 @@ router.get('/me', function(req, res, next) {
   }
 });
 
-router.get('/:public_key', function(req, res, next) {
+router.get('/id/:public_key', function(req, res, next) {
   let key = req.params.public_key
   userRepos.getInfoUser(key).then((data) => {
     if(data){
@@ -74,8 +101,8 @@ router.get('/:public_key', function(req, res, next) {
 });
 
 
-router.get('/:public_key/transactions', function(req, res, next) {
-  let key = req.params.public_key
+router.get('/transactions', function(req, res, next) {
+  let key = req.session.public_key
   let defaultQuery = {
     page: 1,
     limit: 10,
@@ -110,4 +137,5 @@ router.get('/:public_key/transactions', function(req, res, next) {
    })
   })
 });
+
 module.exports = router;
