@@ -110,11 +110,11 @@ const FetchData = () => {
 
 // FetchData()
 
-Users.count({
-  where:{
-    user_id: ["23", "14"]
-  }
-}).then((res) => {console.log(res)})
+// Users.count({
+//   where:{
+//     user_id: ["23", "14"]
+//   }
+// }).then((res) => {console.log(res)})
 
 // Transactions.findAll({
 //   where:{

@@ -126,6 +126,40 @@ exports.getInfoUserByPubkey = (public_key) => {
     }).catch(e => {return null})
 }
 
+exports.getUnfollowedUsers = (query, user_id) => {
+  return user.findOne({
+    where:{
+      user_id: user_id
+    }
+  }).then((data) => {
+    data.following.push(+user_id)
+    return user.count({
+      where: {
+        user_id: {
+          [Op.notIn]: data.following
+        }
+      }
+    }).then((quantity) => {
+      return user.findAll({
+        limit: query.limit,
+        offset: (query.page - 1) * query.limit,
+        order: query.order && query.type ? [[query.order, query.type]] : [],
+        where: {
+          user_id: {
+            [Op.notIn]: data.following
+          }
+        }
+      }).then((users) => {
+        return {
+          users: users,
+          total_page: quantity % query.limit === 0 ? quantity / query.limit : Math.floor(quantity / query.limit) + 1,
+          total_item: quantity,
+        };
+      }).catch(e => {return null})
+    })
+  }).catch(e => {return null})
+}
+
 exports.updateProfile = (hex) => {
   const client = RpcClient(node_url)
   return client.broadcastTxCommit({tx: hex}).then((res) => {
