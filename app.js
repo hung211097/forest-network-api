@@ -77,7 +77,6 @@ app.use('/logout', logoutRouter);
 app.use('/create-account', createAccountRouter);
 app.use('/follow', followRouter);
 app.use('/transactions', transactionRouter);
-
 app.use('/posts', postRouter);
 
 // catch 404 and forward to error handler
