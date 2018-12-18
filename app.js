@@ -19,6 +19,7 @@ var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');
 var registerRouter = require('./routes/register');
 var transactionRouter = require('./routes/transactions');
+var postRouter = require('./routes/posts');
 
 var app = express();
 app.use(cors({
@@ -74,6 +75,7 @@ app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);
 app.use('/register', registerRouter);
 app.use('/transactions', transactionRouter);
+app.use('/posts', postRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -83,7 +83,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 7660; i <= 7660; i++){ //5501 -> 6000
+    for(let i = 6545; i <= 6545; i++){ //5501 -> 6000
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {

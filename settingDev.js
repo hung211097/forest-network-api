@@ -3,7 +3,7 @@ const setting = {
     uri: '',
     database: 'forestnetwork',
     username: 'postgres',
-    password: 'thelight136497',
+    password: 'chisidotoji',
     host: 'localhost',
     port: 5432,
     dialect: 'postgres',
