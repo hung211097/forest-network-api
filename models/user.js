@@ -6,6 +6,8 @@ module.exports = (sequelize, DataTypes) => {
       avatar: {type: DataTypes.TEXT, allowNull: true},
       sequence: {type: DataTypes.INTEGER, allowNull: false},
       amount: {type: DataTypes.BIGINT, allowNull: false, defaultValue: 0},
+      following: {type: DataTypes.ARRAY(DataTypes.INTEGER), allowNull: true, defaultValue: []},
+      follower: {type: DataTypes.ARRAY(DataTypes.INTEGER), allowNull: true, defaultValue: []},
       bandwith: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
       bandwithMax: {type: DataTypes.INTEGER, allowNull: false },
       bandwithTime: {type: DataTypes.DATE, allowNull: false }

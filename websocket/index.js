@@ -199,16 +199,108 @@ async function updateAccount(deData){
       break;
     case 'followings':
       let arr = JSON.parse(deData.params.value.toString('utf8')).addresses
-      asyncForEach(arr, async (item, index) => {
-        await Follows.create({
-         public_key_follower: deData.account,
-         public_key_following: Buffer.from(item.data, 'base32').toString()
-       }).then(() => {}).catch(e => console.log("ERROR CREATE FOLLOWINGS", e))
+      return Users.findOne({
+        where:{
+          public_key: deData.account
+        }
+      }).then(async (user) => {
+        let arrRes = []
+        let arrSrc = []
+        arr.forEach((item) => {
+          arrSrc.push(Buffer.from(item.data, 'base32').toString())
+        })
+        await getListFollow (arrSrc, arrRes)
+        let arrUnfollow = []
+        let arrNewfollow = arrRes.slice()
+        if(user.following && user.following.length){
+          arrUnfollow = user.following.slice()
+          user.following.forEach((item) => {
+            arrNewfollow = arrNewfollow.filter((filterItem) => {
+              return filterItem !== item
+            })
+          })
+          arrRes.forEach((item) => {
+            arrUnfollow = arrUnfollow.filter((filterItem) => {
+              return filterItem !== item
+            })
+          })
+        }
+
+        await Users.update({
+          following: arrRes
+        },{
+          where: {
+            user_id: user.user_id
+          }
+        })
+
+        if(arrNewfollow.length){
+          await updateFollowing(arrNewfollow, user.user_id)
+        }
+        if(arrUnfollow.length){
+          await updateFollower(arrUnfollow, user.user_id)
+        }
       })
       break;
     default:
       break;
   }
+}
+
+async function updateFollowing(arr, user_id){
+  await asyncForEach(arr, async (id, index) => {
+    return Users.findOne({
+      where:{
+        user_id: id
+      }
+    }).then((info) => {
+      if(!info.follower || (info.follower && !info.follower.length)){
+        info.follower = []
+      }
+      info.follower.push(user_id)
+      return Users.update({
+        follower: info.follower
+      },{
+      where: {
+          user_id: id
+        }
+      })
+    })
+  })
+}
+
+async function updateFollower(arr, user_id){
+  await asyncForEach(arr, async (id, index) => {
+    return Users.findOne({
+      where:{
+        user_id: id
+      }
+    }).then((info) => {
+      info.follower = info.follower.filter((temp) => {
+        return temp !== user_id
+      })
+      return Users.update({
+        follower: info.follower
+      },{
+        where: {
+          user_id: id
+        }
+      })
+    })
+  })
+}
+
+async function getListFollow(arrSrc, arrRes){
+  await asyncForEach(arrSrc, async (item, index) => {
+    console.log(item);
+    let follow = await Users.findOne({
+      where: {
+        public_key: item
+      }
+    }).catch(e => console.log(e))
+    // console.log(follow);
+    arrRes.push(follow.user_id)
+  })
 }
 
 async function createPost(deData, time){

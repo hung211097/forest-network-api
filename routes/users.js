@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var userRepos = require('../repos/user')
+var postRepos = require('../repos/post')
 var transactionRepos = require('../repos/transaction')
 
 async function asyncForEach(array, obj, callback) {
@@ -30,18 +31,20 @@ router.get('/', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
       defaultQuery.type = type
     }
   }
-  userRepos.getUsers(defaultQuery).then((data) => {
+  userRepos.getUsers(defaultQuery, req.session.user_id).then((data) => {
     if(data){
      return res.status(200).json({
        length: data.length,
-       users: data,
+       users: data.users,
+       total_page: data.total_page,
+       total_item: data.total_item,
        status: 'success'
      })
    }
@@ -66,8 +69,8 @@ router.post('/update-profile', async function(req, res, next) {
 });
 
 router.get('/me', function(req, res, next) {
-  if(req.session && req.session.public_key && req.session.isLogged){
-    userRepos.getInfoUser(req.session.public_key).then((data) => {
+  if(req.session && req.session.user_id && req.session.isLogged){
+    userRepos.getInfoUserByID(req.session.user_id).then((data) => {
       return res.status(200).json({
         info_user: data,
         status: 'success'
@@ -84,22 +87,6 @@ router.get('/me', function(req, res, next) {
     })
   }
 });
-
-router.get('/id/:public_key', function(req, res, next) {
-  let key = req.params.public_key
-  userRepos.getInfoUser(key).then((data) => {
-    if(data){
-      return res.status(200).json({
-        info_user: data,
-        status: 'success'
-      })
-    }
-    return res.status(200).json({
-      status: 'failed'
-    })
-  })
-});
-
 
 router.get('/transactions', function(req, res, next) {
   let key = req.session.public_key
@@ -135,6 +122,206 @@ router.get('/transactions', function(req, res, next) {
    return res.status(200).json({
      status: 'failed'
    })
+  })
+});
+
+router.get('/:id', function(req, res, next) {
+  let id = req.params.id
+  userRepos.getInfoUserByID(id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        info_user: data,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
+  })
+});
+
+router.get('/:id/unfolloweds', function(req, res, next) {
+  let id = req.params.id
+  let defaultQuery = {
+    page: 1,
+    limit: 10,
+    order: 'createdAt',
+    type: 'DESC'  //ASC / DESC
+  };
+  if(req.query){
+    defaultQuery.page = req.query.page ? +req.query.page : defaultQuery.page
+    defaultQuery.limit = req.query.limit ? +req.query.limit : defaultQuery.limit
+    let order = req.query.order
+    let type = req.query.type
+    if(order &&
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+      defaultQuery.order = order
+    }
+    if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
+      defaultQuery.type = type
+    }
+  }
+  userRepos.getUnfollowedUsers(defaultQuery, id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        length: data.length,
+        followings: data.users,
+        total_page: data.total_page,
+        total_item: data.total_item,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
+  })
+});
+
+router.get('/:id/followings', function(req, res, next) {
+  let id = req.params.id
+  let defaultQuery = {
+    page: 1,
+    limit: 10,
+    order: null,
+    type: null  //ASC / DESC
+  };
+  if(req.query){
+    defaultQuery.page = req.query.page ? +req.query.page : defaultQuery.page
+    defaultQuery.limit = req.query.limit ? +req.query.limit : defaultQuery.limit
+    let order = req.query.order
+    let type = req.query.type
+    if(order &&
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+      defaultQuery.order = order
+    }
+    if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
+      defaultQuery.type = type
+    }
+  }
+  userRepos.getUsersFollowing(defaultQuery, id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        length: data.length,
+        followings: data.users,
+        total_page: data.total_page,
+        total_item: data.total_item,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
+  })
+});
+
+router.get('/:id/followers', function(req, res, next) {
+  let id = req.params.id
+  let defaultQuery = {
+    page: 1,
+    limit: 10,
+    order: null,
+    type: null  //ASC / DESC
+  };
+  if(req.query){
+    defaultQuery.page = req.query.page ? +req.query.page : defaultQuery.page
+    defaultQuery.limit = req.query.limit ? +req.query.limit : defaultQuery.limit
+    let order = req.query.order
+    let type = req.query.type
+    if(order &&
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+      defaultQuery.order = order
+    }
+    if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
+      defaultQuery.type = type
+    }
+  }
+  userRepos.getUsersFollower(defaultQuery, id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        length: data.length,
+        followings: data.users,
+        total_page: data.total_page,
+        total_item: data.total_item,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
+  })
+});
+
+router.get('/:id/posts-wall', function(req, res, next) {
+  let id = req.params.id
+  let defaultQuery = {
+    page: 1,
+    limit: 10,
+    order: 'created_at',
+    type: 'DESC'  //ASC / DESC
+  };
+  if(req.query){
+    defaultQuery.page = req.query.page ? +req.query.page : defaultQuery.page
+    defaultQuery.limit = req.query.limit ? +req.query.limit : defaultQuery.limit
+    let order = req.query.order
+    let type = req.query.type
+    if(order &&
+       (order === 'created_at' || order === 'user_id')){
+      defaultQuery.order = order
+    }
+    if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
+      defaultQuery.type = type
+    }
+  }
+  postRepos.getPostsWall(defaultQuery, id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        length: data.length,
+        posts: data.posts,
+        total_page: data.total_page,
+        total_item: data.total_item,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
+  })
+});
+
+router.get('/:id/my-posts', function(req, res, next) {
+  let id = req.params.id
+  let defaultQuery = {
+    page: 1,
+    limit: 10,
+    order: 'created_at',
+    type: 'DESC'  //ASC / DESC
+  };
+  if(req.query){
+    defaultQuery.page = req.query.page ? +req.query.page : defaultQuery.page
+    defaultQuery.limit = req.query.limit ? +req.query.limit : defaultQuery.limit
+    let order = req.query.order
+    let type = req.query.type
+    if(order &&
+       (order === 'created_at' || order === 'user_id')){
+      defaultQuery.order = order
+    }
+    if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
+      defaultQuery.type = type
+    }
+  }
+  postRepos.getMyPosts(defaultQuery, id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        length: data.length,
+        posts: data.posts,
+        total_page: data.total_page,
+        total_item: data.total_item,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
   })
 });
 
