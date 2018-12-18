@@ -20,7 +20,7 @@ exports.getTransactionsOfUser = (query, public_key) => {
     let result = null
     return transaction.count({
       where: {
-        public_key: public_key
+        [Op.or]: [{public_key: public_key}, {public_key_received: public_key}],
       }
     }).then((quantity) => {
       return transaction.findAll({
@@ -33,8 +33,8 @@ exports.getTransactionsOfUser = (query, public_key) => {
         }
       }).then((transactions) => {
           return {
-            total_page: quantity.length % query.limit === 0 ? quantity.length / query.limit : Math.floor(quantity.length / query.limit) + 1,
-            total_item: quantity.length,
+            total_page: quantity % query.limit === 0 ? quantity / query.limit : Math.floor(quantity / query.limit) + 1,
+            total_item: quantity,
             transactions: transactions
           };
       }).catch(e => {return null})

@@ -17,7 +17,8 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var loginRouter = require('./routes/login');
 var logoutRouter = require('./routes/logout');
-var registerRouter = require('./routes/register');
+var createAccountRouter = require('./routes/create-account');
+var followRouter = require('./routes/follow');
 var transactionRouter = require('./routes/transactions');
 var postRouter = require('./routes/posts');
 
@@ -73,8 +74,10 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/login', loginRouter);
 app.use('/logout', logoutRouter);
-app.use('/register', registerRouter);
+app.use('/create-account', createAccountRouter);
+app.use('/follow', followRouter);
 app.use('/transactions', transactionRouter);
+
 app.use('/posts', postRouter);
 
 // catch 404 and forward to error handler
