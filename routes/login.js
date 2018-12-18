@@ -5,9 +5,10 @@ var userRepos = require('../repos/user')
 router.post('/', function(req, res, next) {
   if(req.body && req.body.public_key){
     let key = req.body.public_key
-    userRepos.getInfoUser(key).then((data) => {
+    userRepos.getInfoUserByPubkey(key).then((data) => {
       if(data){
         req.session.public_key = data.public_key
+        req.session.user_id = data.user_id
         req.session.isLogged = true
         return res.status(200).json({
           info_user: data,
