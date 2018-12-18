@@ -17,6 +17,7 @@ exports.createPost = (hex) => {
 	.catch(e => {
 		return 'failed'
 	})
+}
 
 exports.getPosts = (query) => {
   return post.count().then((quantity) => {

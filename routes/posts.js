@@ -28,6 +28,7 @@ router.post('/', function(req, res, next) {
       }
     }).catch(e => console.log(e))
   }
+});
 
 router.get('/', function(req, res, next) {
   let defaultQuery = {
