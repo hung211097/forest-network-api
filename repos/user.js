@@ -172,6 +172,17 @@ exports.updateProfile = (hex) => {
   })
 }
 
+exports.getPublickeyFollowings = (user_id, arr) => {
+  return user.findAll({
+    where:{
+      user_id: arr
+    },
+    attributes: ['public_key']
+  }).then((pubkeys) => {
+    return pubkeys
+  }).catch(e => {return []})
+}
+
 exports.checkIfEnoughOXY = (publicKey, txString64, timeNewTransaction) => {
     return user.findOne({
       where: {

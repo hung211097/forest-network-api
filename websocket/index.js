@@ -84,13 +84,41 @@ const startImportDB = async (result) => {
           case 'update_account':
             let key = deData.params.key
             if(key === 'name' || key === 'picture' || key === 'followings'){
+              if(key === 'followings'){
+                try{
+                  let arr = JSON.parse(deData.params.value.toString('utf8')).addresses
+                }
+                catch(e){
+                  return
+                }
+              }
               await updateAccount(deData)
               await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+              await Users.update({
+                sequence: deData.sequence
+              },{
+                where: {
+                  public_key: deData.account
+                }
+              }).then(() => {}).catch(e => console.log("ERROR", e))
             }
             break
           case 'post':
+            try{
+              let content = JSON.parse(deData.params.content.toString('utf8'))
+            }
+            catch(e){
+              return
+            }
             await createPost(deData, item.block.header.time)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await Users.update({
+              sequence: deData.sequence
+            },{
+              where: {
+                public_key: deData.account
+              }
+            }).then(() => {}).catch(e => console.log("ERROR", e))
             break
           default:
             break
@@ -292,13 +320,11 @@ async function updateFollower(arr, user_id){
 
 async function getListFollow(arrSrc, arrRes){
   await asyncForEach(arrSrc, async (item, index) => {
-    console.log(item);
     let follow = await Users.findOne({
       where: {
         public_key: item
       }
     }).catch(e => console.log(e))
-    // console.log(follow);
     arrRes.push(follow.user_id)
   })
 }
@@ -310,13 +336,7 @@ async function createPost(deData, time){
     }
   }).then((user) => {
     if(user){
-      let content = null
-      try{
-        content = JSON.parse(deData.params.content.toString('utf8'))
-      }
-      catch(e){
-        return
-      }
+      let content = JSON.parse(deData.params.content.toString('utf8'))
       return Posts.create({
         user_id: user.user_id,
         content: content.text,

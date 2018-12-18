@@ -80,7 +80,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 9583; i <= 9583; i++){ //5501 -> 6000
+    for(let i = 11010; i <= 11010; i++){ //5501 -> 6000
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -97,31 +97,9 @@ const FetchData = () => {
   })
 }
 
-// Transactions.count({
-//   where: {
-//     public_key: 'GBIDPG4BFSTJSR3TYPJG4S4R2MEZX6U6FK5YJVIGD4ZJ3LTM4B5IS4RB'
-//   }
-// }).then((res) => {
-//   console.log(res);
-// })
-
-
 // db.sync();
 
-// FetchData()
-
-// Users.count({
-//   where:{
-//     user_id: ["23", "14"]
-//   }
-// }).then((res) => {console.log(res)})
-
-// Transactions.findAll({
-//   where:{
-//     public_key: 'GAO4J5RXQHUVVONBDQZSRTBC42E3EIK66WZA5ZSGKMFCS6UNYMZSIDBI'
-//   },
-//   include: [{model:Users, where:{user_id: 1}}]
-// }).then((res) => console.log(res))
+FetchData()
 
 // const client = RpcClient('wss://komodo.forest.network:443')
 // client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
@@ -167,13 +145,42 @@ const startImportDB = async (result) => {
           case 'update_account':
             let key = deData.params.key
             if(key === 'name' || key === 'picture' || key === 'followings'){
+              if(key === 'followings'){
+                try{
+                  let arr = JSON.parse(deData.params.value.toString('utf8')).addresses
+                }
+                catch(e){
+                  return
+                }
+              }
               await updateAccount(deData)
               await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+              await Users.update({
+                sequence: deData.sequence
+              },{
+                where: {
+                  public_key: deData.account
+                }
+              }).then(() => {}).catch(e => console.log("ERROR", e))
             }
             break
           case 'post':
+            try{
+              let content = JSON.parse(deData.params.content.toString('utf8'))
+            }
+            catch(e){
+              console.log(e);
+              return
+            }
             await createPost(deData, item.block.header.time)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await Users.update({
+              sequence: deData.sequence
+            },{
+              where: {
+                public_key: deData.account
+              }
+            }).then(() => {}).catch(e => console.log("ERROR", e))
             break
           default:
             break
@@ -398,7 +405,6 @@ async function updateFollower(arr, user_id){
 
 async function getListFollow(arrSrc, arrRes){
   await asyncForEach(arrSrc, async (item, index) => {
-    console.log(item);
     let follow = await Users.findOne({
       where: {
         public_key: item
@@ -416,13 +422,8 @@ async function createPost(deData, time){
     }
   }).then((user) => {
     if(user){
-      let content = null
-      try{
-        content = JSON.parse(deData.params.content.toString('utf8'))
-      }
-      catch(e){
-        return
-      }
+      let content = JSON.parse(deData.params.content.toString('utf8'))
+      console.log(content);
       return Posts.create({
         user_id: user.user_id,
         content: content.text,
