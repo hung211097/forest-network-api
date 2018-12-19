@@ -7,6 +7,10 @@ module.exports = (req, res, next) => {
     req.session.public_key = null;
   }
 
+  if (req.session.user_id === undefined) {
+    req.session.user_id = null;
+  }
+
   res.locals.layoutVM = {
     isLogged: req.session.isLogged,
     publicKey: req.session.public_key,

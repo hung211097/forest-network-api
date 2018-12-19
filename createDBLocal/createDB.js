@@ -4,6 +4,9 @@ const db = new Sequelize(dbConfig);
 const moment = require('moment');
 const { RpcClient } = require('tendermint')
 const { encode, decode, verify, sign, hash } = require('../lib/transaction')
+const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
+const base32 = require('base32.js');
+
 const BANDWIDTH_PERIOD = 86400;
 const MAX_CELLULOSE = 9007199254740991;
 const NETWORK_BANDWIDTH = BANDWIDTH_PERIOD * 22020096;
@@ -14,20 +17,24 @@ const NETWORK_BANDWIDTH = BANDWIDTH_PERIOD * 22020096;
 
 const Users = db.define('Users', {
   user_id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
-  public_key: {type: Sequelize.STRING, allowNull: false},
-  tendermint_address: {type: Sequelize.STRING, allowNull: true},
+  public_key: {type: Sequelize.STRING, allowNull: false, unique: true},
   username: {type: Sequelize.STRING, allowNull: false},
+  avatar: {type: Sequelize.TEXT, allowNull: true},
   sequence: {type: Sequelize.INTEGER, allowNull: false},
   amount: {type: Sequelize.BIGINT, allowNull: false, defaultValue: 0},
+  following: {type: Sequelize.ARRAY(Sequelize.INTEGER), allowNull: true, defaultValue: []},
+  follower: {type: Sequelize.ARRAY(Sequelize.INTEGER), allowNull: true, defaultValue: []},
   bandwith: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
   bandwithMax: {type: Sequelize.INTEGER, allowNull: false },
-  bandwithTime: {type: Sequelize.DATE, allowNull: false }
+  bandwithTime: {type: Sequelize.DATE, allowNull: false },
+  created_at: {type: Sequelize.DATE, allowNull: false},
 })
 
 const Transactions = db.define('Transactions', {
-  public_key: {type: Sequelize.STRING, allowNull: false, primaryKey: true},
-  public_key_received: {type: Sequelize.STRING, allowNull: false, primaryKey: true},
-  created_at: {type: Sequelize.DATE, allowNull: false, primaryKey: true, defaultValue: Sequelize.NOW},
+  id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
+  public_key: {type: Sequelize.STRING, allowNull: false},
+  public_key_received: {type: Sequelize.STRING, allowNull: false},
+  created_at: {type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.NOW},
   amount: {type: Sequelize.BIGINT, allowNull: false},
   operation: {type: Sequelize.STRING, allowNull: false},
   memo: {type: Sequelize.TEXT, allowNull: true}
@@ -37,6 +44,29 @@ const Info = db.define('Blockchains', {
   height: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true},
 })
 
+const Posts = db.define('Posts', {
+  id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
+  content: {type: Sequelize.TEXT, allowNull: false},
+  created_at: {type: Sequelize.DATE, allowNull: false},
+})
+
+const Comments = db.define('Comments', {
+  id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
+  content: {type: Sequelize.TEXT, allowNull: false},
+  created_at: {type: Sequelize.DATE, allowNull: false},
+})
+
+
+Users.hasMany(Transactions, {foreignKey: 'user_id'})
+Transactions.belongsTo(Users, {foreignKey: 'user_id'})
+
+Users.hasMany(Posts, {foreignKey: 'user_id'})
+Posts.belongsTo(Users, {foreignKey: 'user_id'})
+
+Users.hasMany(Comments, {foreignKey: 'user_id'})
+Comments.belongsTo(Users, {foreignKey: 'user_id'})
+Posts.hasMany(Comments, {foreignKey: 'post_id'})
+Comments.belongsTo(Posts, {foreignKey: 'post_id'})
 
 const FetchData = () => {
   const client = RpcClient('https://dragonfly.forest.network:443')
@@ -54,7 +84,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 5501; i <= 6000; i++){
+    for(let i = 12001; i <= 12150; i++){ //12001 -> 12150
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -73,7 +103,8 @@ const FetchData = () => {
 
 // db.sync();
 
-// FetchData()
+FetchData()
+
 // const client = RpcClient('wss://komodo.forest.network:443')
 // client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
 //   console.log("OK");
@@ -102,7 +133,8 @@ const startImportDB = async (result) => {
               username: "User " + (index + 1),
               sequence: 0,
               bandwithTime: item.block.header.time,
-              bandwithMax: 0
+              bandwithMax: 0,
+              created_at: item.block.header.time
             })
             await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)
@@ -115,6 +147,47 @@ const startImportDB = async (result) => {
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], true)
             break
+          case 'update_account':
+            await createTransaction(deData, item.block.header.time)
+            await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await Users.update({
+              sequence: deData.sequence
+            },{
+              where: {
+                public_key: deData.account
+              }
+            }).then(() => {}).catch(e => console.log("ERROR", e))
+            let key = deData.params.key
+            if(key === 'name' || key === 'picture' || key === 'followings'){
+              if(key === 'followings'){
+                try{
+                  decodeFollowing(deData.params.value)
+                }
+                catch(e){
+                  return
+                }
+              }
+              await updateAccount(deData)
+            }
+            break
+          case 'post':
+            await createTransaction(deData, item.block.header.time)
+            await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await Users.update({
+              sequence: deData.sequence
+            },{
+              where: {
+                public_key: deData.account
+              }
+            }).then(() => {}).catch(e => console.log("ERROR", e))
+            try{
+              decodePost(deData.params.content)
+            }
+            catch(e){
+              return
+            }
+            await createPost(deData, item.block.header.time)
+            break
           default:
             break
         }
@@ -123,13 +196,22 @@ const startImportDB = async (result) => {
 }
 
 async function createTransaction(deData, time){
-  await Transactions.create({
-    public_key: deData.account,
-    public_key_received: deData.params.address,
-    amount: deData.params.amount ? deData.params.amount : 0,
-    operation: deData.operation,
-    created_at: time,
-    memo: deData.memo.toString() ? deData.memo.toString() : ''
+  await Users.findOne({
+    where:{
+      public_key: deData.account
+    }
+  }).then((res) => {
+    if(res){
+      return Transactions.create({
+        public_key: deData.account,
+        public_key_received: deData.params.address ? deData.params.address : '',
+        amount: deData.params.amount ? deData.params.amount : 0,
+        operation: deData.operation,
+        created_at: time,
+        memo: deData.memo.toString() ? deData.memo.toString() : '',
+        user_id: res.user_id
+      })
+    }
   })
 }
 
@@ -212,6 +294,149 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
       }
     }
   }).catch(e => console.log("ERROR FIND USER", e))
+}
+
+async function updateAccount(deData){
+  switch(deData.params.key)
+  {
+    case 'name':
+      return Users.update({
+        username: deData.params.value.toString('utf8')
+      },{
+        where: {
+          public_key: deData.account
+        }
+      }).then(() => {}).catch(e => console.log("ERROR UPDATE NAME", e))
+    case 'picture':
+      return Users.update({
+        avatar: 'data:image/jpeg;base64,' + deData.params.value.toString('base64')
+      },{
+        where: {
+          public_key: deData.account
+        }
+      }).then(() => {}).catch(e => console.log("ERROR UPDATE PICTURE", e))
+      break;
+    case 'followings':
+      let arr = []
+      let objFollow = decodeFollowing(deData.params.value).addresses
+      objFollow.forEach((item) => {
+        arr.push(base32.encode(item))
+      })
+      return Users.findOne({
+        where:{
+          public_key: deData.account
+        }
+      }).then(async (user) => {
+        let arrRes = []
+        await getListFollow (arr, arrRes)
+        let arrUnfollow = []
+        let arrNewfollow = arrRes.slice()
+        if(user.following && user.following.length){
+          arrUnfollow = user.following.slice()
+          user.following.forEach((item) => {
+            arrNewfollow = arrNewfollow.filter((filterItem) => {
+              return filterItem !== item
+            })
+          })
+          arrRes.forEach((item) => {
+            arrUnfollow = arrUnfollow.filter((filterItem) => {
+              return filterItem !== item
+            })
+          })
+        }
+
+        await Users.update({
+          following: arrRes
+        },{
+          where: {
+            user_id: user.user_id
+          }
+        })
+
+        if(arrNewfollow.length){
+          await updateFollowing(arrNewfollow, user.user_id)
+        }
+        if(arrUnfollow.length){
+          await updateFollower(arrUnfollow, user.user_id)
+        }
+      })
+      break;
+    default:
+      break;
+  }
+}
+
+async function updateFollowing(arr, user_id){
+  await asyncForEach(arr, async (id, index) => {
+    return Users.findOne({
+      where:{
+        user_id: id
+      }
+    }).then((info) => {
+      if(!info.follower || (info.follower && !info.follower.length)){
+        info.follower = []
+      }
+      info.follower.push(user_id)
+      return Users.update({
+        follower: info.follower
+      },{
+      where: {
+          user_id: id
+        }
+      })
+    })
+  })
+}
+
+async function updateFollower(arr, user_id){
+  await asyncForEach(arr, async (id, index) => {
+    return Users.findOne({
+      where:{
+        user_id: id
+      }
+    }).then((info) => {
+      info.follower = info.follower.filter((temp) => {
+        return temp !== user_id
+      })
+      return Users.update({
+        follower: info.follower
+      },{
+        where: {
+          user_id: id
+        }
+      })
+    })
+  })
+}
+
+async function getListFollow(arrSrc, arrRes){
+  await asyncForEach(arrSrc, async (item, index) => {
+    let follow = await Users.findOne({
+      where: {
+        public_key: item
+      }
+    }).catch(e => console.log(e))
+    // console.log(follow);
+    arrRes.push(follow.user_id)
+  })
+}
+
+async function createPost(deData, time){
+  return Users.findOne({
+    where: {
+      public_key: deData.account
+    }
+  }).then((user) => {
+    if(user){
+      let content = decodePost(deData.params.content).text
+      // let content = JSON.parse(deData.params.content.toString('utf8'))
+      return Posts.create({
+        user_id: user.user_id,
+        content: content,
+        created_at: time
+      }).then(() => {}).catch(e => console.log("ERROR CREATE POST", e))
+    }
+  }).catch(e => console.log("ERROR", e))
 }
 
 module.exports = db;

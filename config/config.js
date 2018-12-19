@@ -2,11 +2,19 @@ const dbConfig = require('../settingDev').databaseConfig;
 const Sequelize = require('sequelize');
 const db = new Sequelize(dbConfig);
 
-let objDB = {};
-objDB.sequelize = db;
-objDB.user = require('../models/user')(db, Sequelize);
-objDB.transaction = require('../models/transaction')(db, Sequelize);
-objDB.blockchain = require('../models/infoBC')(db, Sequelize);
+let objDB = {
+  Users: require('../models/user')(db, Sequelize),
+  Transactions: require('../models/transaction')(db, Sequelize),
+  Info: require('../models/infoBC')(db, Sequelize),
+  Posts: require('../models/posts')(db, Sequelize),
+  Comments: require('../models/comments')(db, Sequelize),
+};
 
-objDB.sequelize.sync();
+Object.keys(objDB).forEach((modelName) => {
+  if('associate' in objDB[modelName]){
+    objDB[modelName].associate(objDB)
+  }
+})
+
+db.sync();
 module.exports = objDB;

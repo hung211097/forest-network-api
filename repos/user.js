@@ -1,20 +1,122 @@
 const db = require('../config/config');
-const user = db.user;
-const publicKey = require('../settingDev').public_key;
+const user = db.Users;
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH} = require('../constants')
 const moment = require('moment')
+const { RpcClient } = require('tendermint')
+const node_url = require('../settingDev').node_url;
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 
-exports.getUsers = (query) => {
-    return user.findAll({
-      limit: query.limit,
-      offset: (query.page - 1) * query.limit,
-      order: query.order && query.type ? [[query.order, query.type]] : [],
-    }).then((users) => {
-        return users;
+exports.getUsers = (query, exceptID) => {
+    return user.count({
+      where: {
+        user_id: {
+          [Op.ne]: exceptID
+        }
+      }
+    }).then((quantity) => {
+      return user.findAll({
+        limit: query.limit,
+        offset: (query.page - 1) * query.limit,
+        order: query.order && query.type ? [[query.order, query.type]] : [],
+        where: {
+          user_id: {
+            [Op.ne]: exceptID
+          }
+        }
+      }).then((users) => {
+        return {
+          users: users,
+          total_page: quantity % query.limit === 0 ? quantity / query.limit : Math.floor(quantity / query.limit) + 1,
+          total_item: quantity,
+        };
+      }).catch(e => {return null})
+    })
+}
+
+exports.getUsersFollowing = (query, user_id) => {
+    return user.findOne({
+      where:{
+        user_id: user_id
+      }
+    }).then((data) => {
+      if(!data.following.length){
+        return {
+          users: [],
+          total_page: 0,
+          total_item: 0
+        }
+      }
+      return user.count({
+        where: {
+          user_id: data.following
+        }
+      }).then((quantity) => {
+        return user.findAll({
+          limit: query.limit,
+          offset: (query.page - 1) * query.limit,
+          order: query.order && query.type ? [[query.order, query.type]] : [],
+          where: {
+            user_id: data.following
+          }
+        }).then((users) => {
+          return {
+            users: users,
+            total_page: quantity % query.limit === 0 ? quantity / query.limit : Math.floor(quantity / query.limit) + 1,
+            total_item: quantity,
+          };
+        }).catch(e => {return null})
+      })
     }).catch(e => {return null})
 }
 
-exports.getInfoUser = (public_key) => {
+exports.getUsersFollower = (query, user_id) => {
+  return user.findOne({
+    where:{
+      user_id: user_id
+    }
+  }).then((data) => {
+    if(!data.follower.length){
+      return {
+        users: [],
+        total_page: 0,
+        total_item: 0
+      }
+    }
+    return user.count({
+      where: {
+        user_id: data.follower
+      }
+    }).then((quantity) => {
+      return user.findAll({
+        limit: query.limit,
+        offset: (query.page - 1) * query.limit,
+        order: query.order && query.type ? [[query.order, query.type]] : [],
+        where: {
+          user_id: data.follower
+        }
+      }).then((users) => {
+        return {
+          users: users,
+          total_page: quantity % query.limit === 0 ? quantity / query.limit : Math.floor(quantity / query.limit) + 1,
+          total_item: quantity,
+        };
+      }).catch(e => {return null})
+    })
+  }).catch(e => {return null})
+}
+
+exports.getInfoUserByID = (user_id) => {
+    return user.findOne({
+      where: {
+        user_id: user_id
+      }
+    }).then((user) => {
+        return user;
+    }).catch(e => {return null})
+}
+
+exports.getInfoUserByPubkey = (public_key) => {
     return user.findOne({
       where: {
         public_key: public_key
@@ -22,6 +124,63 @@ exports.getInfoUser = (public_key) => {
     }).then((user) => {
         return user;
     }).catch(e => {return null})
+}
+
+exports.getUnfollowedUsers = (query, user_id) => {
+  return user.findOne({
+    where:{
+      user_id: user_id
+    }
+  }).then((data) => {
+    data.following.push(+user_id)
+    return user.count({
+      where: {
+        user_id: {
+          [Op.notIn]: data.following
+        }
+      }
+    }).then((quantity) => {
+      return user.findAll({
+        limit: query.limit,
+        offset: (query.page - 1) * query.limit,
+        order: query.order && query.type ? [[query.order, query.type]] : [],
+        where: {
+          user_id: {
+            [Op.notIn]: data.following
+          }
+        }
+      }).then((users) => {
+        return {
+          users: users,
+          total_page: quantity % query.limit === 0 ? quantity / query.limit : Math.floor(quantity / query.limit) + 1,
+          total_item: quantity,
+        };
+      }).catch(e => {return null})
+    })
+  }).catch(e => {return null})
+}
+
+exports.updateProfile = (hex) => {
+  const client = RpcClient(node_url)
+  return client.broadcastTxCommit({tx: hex}).then((res) => {
+    if(+res.height !== 0){
+      return 'success'
+    }
+    return 'failed'
+  }).catch(e => {
+    return 'failed'
+  })
+}
+
+exports.getPublickeyFollowings = (user_id, arr) => {
+  return user.findAll({
+    where:{
+      user_id: arr
+    },
+    attributes: ['public_key']
+  }).then((pubkeys) => {
+    return pubkeys
+  }).catch(e => {return []})
 }
 
 exports.checkIfEnoughOXY = (publicKey, txString64, timeNewTransaction) => {
