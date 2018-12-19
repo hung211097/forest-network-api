@@ -26,7 +26,8 @@ const Users = db.define('Users', {
   follower: {type: Sequelize.ARRAY(Sequelize.INTEGER), allowNull: true, defaultValue: []},
   bandwith: {type: Sequelize.INTEGER, allowNull: false, defaultValue: 0},
   bandwithMax: {type: Sequelize.INTEGER, allowNull: false },
-  bandwithTime: {type: Sequelize.DATE, allowNull: false }
+  bandwithTime: {type: Sequelize.DATE, allowNull: false },
+  created_at: {type: Sequelize.DATE, allowNull: false},
 })
 
 const Transactions = db.define('Transactions', {
@@ -83,7 +84,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 11501; i <= 12000; i++){
+    for(let i = 12001; i <= 12150; i++){ //12001 -> 12150
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -132,7 +133,8 @@ const startImportDB = async (result) => {
               username: "User " + (index + 1),
               sequence: 0,
               bandwithTime: item.block.header.time,
-              bandwithMax: 0
+              bandwithMax: 0,
+              created_at: item.block.header.time
             })
             await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)

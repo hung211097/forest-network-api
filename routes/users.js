@@ -31,7 +31,7 @@ router.get('/', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
@@ -145,7 +145,7 @@ router.get('/:id/unfolloweds', function(req, res, next) {
   let defaultQuery = {
     page: 1,
     limit: 10,
-    order: 'createdAt',
+    order: 'created_at',
     type: 'DESC'  //ASC / DESC
   };
   if(req.query){
@@ -154,7 +154,7 @@ router.get('/:id/unfolloweds', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
@@ -209,7 +209,7 @@ router.get('/:id/followings', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
@@ -246,7 +246,7 @@ router.get('/:id/followers', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
