@@ -5,6 +5,8 @@ const { encode, decode, verify, sign, hash } = require('../lib/transaction')
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH } = require('../constants')
 const websocket_url = require('../settingDev').node_url_websocket;
 const node_url = require('../settingDev').node_url;
+const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
+const base32 = require('base32.js');
 
 const Users = db.Users;
 const Transactions = db.Transactions;
@@ -82,35 +84,7 @@ const startImportDB = async (result) => {
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], true)
             break
           case 'update_account':
-            let key = deData.params.key
-            if(key === 'name' || key === 'picture' || key === 'followings'){
-              if(key === 'followings'){
-                try{
-                  let arr = JSON.parse(deData.params.value.toString('utf8')).addresses
-                }
-                catch(e){
-                  return
-                }
-              }
-              await updateAccount(deData)
-              await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
-              await Users.update({
-                sequence: deData.sequence
-              },{
-                where: {
-                  public_key: deData.account
-                }
-              }).then(() => {}).catch(e => console.log("ERROR", e))
-            }
-            break
-          case 'post':
-            try{
-              let content = JSON.parse(deData.params.content.toString('utf8'))
-            }
-            catch(e){
-              return
-            }
-            await createPost(deData, item.block.header.time)
+            await createTransaction(deData, item.block.header.time)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await Users.update({
               sequence: deData.sequence
@@ -119,6 +93,36 @@ const startImportDB = async (result) => {
                 public_key: deData.account
               }
             }).then(() => {}).catch(e => console.log("ERROR", e))
+            let key = deData.params.key
+            if(key === 'name' || key === 'picture' || key === 'followings'){
+              if(key === 'followings'){
+                try{
+                  decodeFollowing(deData.params.value)
+                }
+                catch(e){
+                  return
+                }
+              }
+              await updateAccount(deData)
+            }
+            break
+          case 'post':
+            await createTransaction(deData, item.block.header.time)
+            await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await Users.update({
+              sequence: deData.sequence
+            },{
+              where: {
+                public_key: deData.account
+              }
+            }).then(() => {}).catch(e => console.log("ERROR", e))
+            try{
+              decodePost(deData.params.content)
+            }
+            catch(e){
+              return
+            }
+            await createPost(deData, item.block.header.time)
             break
           default:
             break
@@ -128,13 +132,22 @@ const startImportDB = async (result) => {
 }
 
 async function createTransaction(deData, time){
-  await Transactions.create({
-    public_key: deData.account,
-    public_key_received: deData.params.address,
-    amount: deData.params.amount ? deData.params.amount : 0,
-    operation: deData.operation,
-    created_at: time,
-    memo: deData.memo.toString() ? deData.memo.toString() : ''
+  await Users.findOne({
+    where:{
+      public_key: deData.account
+    }
+  }).then((res) => {
+    if(res){
+      return Transactions.create({
+        public_key: deData.account,
+        public_key_received: deData.params.address ? deData.params.address : '',
+        amount: deData.params.amount ? deData.params.amount : 0,
+        operation: deData.operation,
+        created_at: time,
+        memo: deData.memo.toString() ? deData.memo.toString() : '',
+        user_id: res.user_id
+      })
+    }
   })
 }
 
@@ -176,6 +189,7 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
       }
       const bandwidthLimit = Math.floor(account.amount / MAX_CELLULOSE * NETWORK_BANDWIDTH)
       // 24 hours window max 65kB
+
       const bandwidthConsume = Math.ceil(Math.max(0, (BANDWIDTH_PERIOD - diff) / BANDWIDTH_PERIOD) * account.bandwith + txSize)
       // Check bandwidth
       return Users.update({
@@ -226,18 +240,18 @@ async function updateAccount(deData){
       }).then(() => {}).catch(e => console.log("ERROR UPDATE PICTURE", e))
       break;
     case 'followings':
-      let arr = JSON.parse(deData.params.value.toString('utf8')).addresses
+      let arr = []
+      let objFollow = decodeFollowing(deData.params.value).addresses
+      objFollow.forEach((item) => {
+        arr.push(base32.encode(item))
+      })
       return Users.findOne({
         where:{
           public_key: deData.account
         }
       }).then(async (user) => {
         let arrRes = []
-        let arrSrc = []
-        arr.forEach((item) => {
-          arrSrc.push(Buffer.from(item.data, 'base32').toString())
-        })
-        await getListFollow (arrSrc, arrRes)
+        await getListFollow (arr, arrRes)
         let arrUnfollow = []
         let arrNewfollow = arrRes.slice()
         if(user.following && user.following.length){
@@ -325,6 +339,7 @@ async function getListFollow(arrSrc, arrRes){
         public_key: item
       }
     }).catch(e => console.log(e))
+    // console.log(follow);
     arrRes.push(follow.user_id)
   })
 }
@@ -336,14 +351,16 @@ async function createPost(deData, time){
     }
   }).then((user) => {
     if(user){
-      let content = JSON.parse(deData.params.content.toString('utf8'))
+      let content = decodePost(deData.params.content).text
+      // let content = JSON.parse(deData.params.content.toString('utf8'))
       return Posts.create({
         user_id: user.user_id,
-        content: content.text,
+        content: content,
         created_at: time
       }).then(() => {}).catch(e => console.log("ERROR CREATE POST", e))
     }
   }).catch(e => console.log("ERROR", e))
 }
+
 
 module.exports = StartWebSocket;
