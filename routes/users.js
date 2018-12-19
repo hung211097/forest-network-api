@@ -31,7 +31,7 @@ router.get('/', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
@@ -145,7 +145,7 @@ router.get('/:id/unfolloweds', function(req, res, next) {
   let defaultQuery = {
     page: 1,
     limit: 10,
-    order: 'createdAt',
+    order: 'created_at',
     type: 'DESC'  //ASC / DESC
   };
   if(req.query){
@@ -154,7 +154,7 @@ router.get('/:id/unfolloweds', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
@@ -165,7 +165,7 @@ router.get('/:id/unfolloweds', function(req, res, next) {
     if(data){
       return res.status(200).json({
         length: data.length,
-        followings: data.users,
+        users: data.users,
         total_page: data.total_page,
         total_item: data.total_item,
         status: 'success'
@@ -175,6 +175,24 @@ router.get('/:id/unfolloweds', function(req, res, next) {
       status: 'failed'
     })
   })
+});
+
+router.post('/:id/followings/public-key', function(req, res, next) {
+  let id = req.params.id
+  if(req.body && req.body.data){
+    userRepos.getPublickeyFollowings(id, req.body.data).then((data) => {
+      if(data){
+        return res.status(200).json({
+          pubkeys: data,
+          status: 'success'
+        })
+      }
+    })
+  }else{
+    return res.status(200).json({
+      status: 'failed'
+    })
+  }
 });
 
 router.get('/:id/followings', function(req, res, next) {
@@ -191,7 +209,7 @@ router.get('/:id/followings', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
@@ -228,7 +246,7 @@ router.get('/:id/followers', function(req, res, next) {
     let order = req.query.order
     let type = req.query.type
     if(order &&
-       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'createdAt')){
+       (order === 'username' || order === 'bandwithMax'|| order === 'user_id' || order === 'created_at')){
       defaultQuery.order = order
     }
     if(type && (type.toUpperCase() === 'ASC' || type.toUpperCase() === 'DESC')){
