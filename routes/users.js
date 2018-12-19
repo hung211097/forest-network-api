@@ -88,7 +88,7 @@ router.get('/me', function(req, res, next) {
   }
 });
 
-router.get('/transactions', function(req, res, next) {
+router.get('/me/transactions', function(req, res, next) {
   let key = req.session.public_key
   let defaultQuery = {
     page: 1,
@@ -257,7 +257,7 @@ router.get('/:id/followers', function(req, res, next) {
     if(data){
       return res.status(200).json({
         length: data.length,
-        followings: data.users,
+        followers: data.users,
         total_page: data.total_page,
         total_item: data.total_item,
         status: 'success'

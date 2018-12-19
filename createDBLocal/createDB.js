@@ -103,7 +103,19 @@ const FetchData = () => {
 
 // db.sync();
 
-FetchData()
+// FetchData()
+
+Posts.findAll({
+  where: {
+    user_id: 89
+  },
+  include: [{
+    model: Users,
+    attributes: ['username', 'user_id', 'avatar']
+  }]
+}).then((res) => {
+  console.log(res[0].User);
+})
 
 // const client = RpcClient('wss://komodo.forest.network:443')
 // client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
