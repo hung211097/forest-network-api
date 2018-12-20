@@ -12,7 +12,7 @@ async function asyncForEach(array, obj, callback) {
 
 async function pushCheckUpdate(arr, obj){
   await asyncForEach(Object.keys(obj), obj, async (hex, key) => {
-    let flag = await userRepos.updateProfile(hex)
+    let flag = await userRepos.updateProfile(key, hex)
     arr.push({key: key, value: flag})
   })
 }

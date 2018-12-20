@@ -6,6 +6,9 @@ const { RpcClient } = require('tendermint')
 const { encode, decode, verify, sign, hash } = require('../lib/transaction')
 const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
 const base32 = require('base32.js');
+const axios = require('axios');
+const transaction = require('../lib/transaction')
+const querystring = require('querystring')
 
 const BANDWIDTH_PERIOD = 86400;
 const MAX_CELLULOSE = 9007199254740991;
@@ -47,6 +50,7 @@ const Info = db.define('Blockchains', {
 const Posts = db.define('Posts', {
   id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
   content: {type: Sequelize.TEXT, allowNull: false},
+  likes: {type: Sequelize.ARRAY(Sequelize.INTEGER), allowNull: true, defaultValue: []},
   created_at: {type: Sequelize.DATE, allowNull: false},
 })
 
@@ -84,7 +88,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 12001; i <= 12150; i++){ //12001 -> 12150
+    for(let i = 13501; i <= 13765; i++){ //12001 -> 12150
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -103,19 +107,56 @@ const FetchData = () => {
 
 // db.sync();
 
-// FetchData()
+FetchData()
 
-Posts.findAll({
-  where: {
-    user_id: 89
-  },
-  include: [{
-    model: Users,
-    attributes: ['username', 'user_id', 'avatar']
-  }]
-}).then((res) => {
-  console.log(res[0].User);
-})
+
+// const fs = require("fs");
+//
+// fs.readFile('avatar.jpg', function(err, data) {
+//   if (err) throw err;
+//   var encodedImage = new Buffer(data, 'binary');
+//   // Encode to base64
+//   console.log(encodedImage);
+//   // Decode from base64
+//   // var decodedImage = new Buffer(encodedImage, 'base64').toString('binary');
+//   const tx = {
+//     version: 1,
+//     sequence: 38,
+//     memo: Buffer.alloc(0),
+//     account: "GBIDPG4BFSTJSR3TYPJG4S4R2MEZX6U6FK5YJVIGD4ZJ3LTM4B5IS4RB",
+//     operation: "update_account",
+//     params: {
+//       key: 'picture',
+//       value: encodedImage
+//     },
+//     signature: new Buffer(64)
+//   }
+//
+//   transaction.sign(tx, "SB5YAIOBU72LC4PTYTEUJOKCN4LWEQDPKKFRQ6NRQMXRG42TMURPRZNA");
+//   let TxEncode = '0x' + transaction.encode(tx).toString('hex');
+//   console.log(querystring);
+//   axios.post('https://komodo.forest.network/broadcast_tx_commit',
+//   querystring.stringify({tx: TxEncode}),
+//   {
+//     headers: { 'content-type': 'application/x-www-form-urlencoded' },
+//   }).then((res) => {
+//     console.log("RESULT", res);
+//   })
+//   // console.log(TxEncode);
+// });
+
+
+// Posts.findAll({
+//   where: {
+//     user_id: 89
+//   },
+//   include: [{
+//     model: Users,
+//     attributes: ['username', 'user_id', 'avatar']
+//   }]
+// }).then((res) => {
+//   console.log(res[0].User);
+// })
 
 // const client = RpcClient('wss://komodo.forest.network:443')
 // client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
