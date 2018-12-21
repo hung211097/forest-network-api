@@ -7,6 +7,7 @@ const websocket_url = require('../settingDev').node_url_websocket;
 const node_url = require('../settingDev').node_url;
 const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
 const base32 = require('base32.js');
+const chance = require('chance').Chance()
 
 const Users = db.Users;
 const Transactions = db.Transactions;
@@ -42,7 +43,7 @@ const FetchData = (newBlock) => {
 const StartWebSocket = () => {
   const client = RpcClient(websocket_url)
   client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
-    FetchData(err.block)
+    // FetchData(err.block)
     console.log(err)
   }).catch(e => console.log("ERROR", e))
 }
@@ -66,7 +67,7 @@ const startImportDB = async (result) => {
             await Users.create({
               public_key: deData.params.address,
               tendermint_address: '',
-              username: "User " + (index + 1),
+              username: chance.name(),
               sequence: 0,
               bandwithTime: item.block.header.time,
               bandwithMax: 0,
