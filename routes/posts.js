@@ -3,7 +3,6 @@ var router = express.Router();
 var postRepos = require('../repos/post')
 var transactionRepos = require('../repos/transaction')
 var userRepos = require('../repos/user')
-const transaction = require('../lib/transaction/index')
 
 router.post('/', function(req, res, next) {
   if(req.body && req.body.TxEncode){
