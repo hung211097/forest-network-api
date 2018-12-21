@@ -7,6 +7,7 @@ const websocket_url = require('../settingDev').node_url_websocket;
 const node_url = require('../settingDev').node_url;
 const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
 const base32 = require('base32.js');
+const chance = require('chance').Chance()
 
 const Users = db.Users;
 const Transactions = db.Transactions;
@@ -19,8 +20,7 @@ const FetchData = (newBlock) => {
   console.log("BEGIN ADD NEW DATA");
   const fetch = RpcClient(node_url)
   let fromBlock = 0;
-  let toBlock = newBlock.header.height;
-  toBlock = +res.block_meta.header.height
+  let toBlock = +newBlock.header.height;
 
   Info.findAll().then((dataHeight) => {
     if(!dataHeight.length){
@@ -31,7 +31,7 @@ const FetchData = (newBlock) => {
     }
 
     let query = []
-    for(let i = dataHeight[0].height; i <= toBlock; i++){
+    for(let i = dataHeight[0].height + 1; i <= toBlock; i++){
       query.push(fetch.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -43,8 +43,8 @@ const FetchData = (newBlock) => {
 const StartWebSocket = () => {
   const client = RpcClient(websocket_url)
   client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
-    // FetchData(newBlock)
-    console.log(err, event)
+    // FetchData(err.block)
+    console.log(err)
   }).catch(e => console.log("ERROR", e))
 }
 
@@ -67,11 +67,12 @@ const startImportDB = async (result) => {
             await Users.create({
               public_key: deData.params.address,
               tendermint_address: '',
-              username: "User " + (index + 1),
+              username: chance.name(),
               sequence: 0,
               bandwithTime: item.block.header.time,
-              bandwithMax: 0
-            })
+              bandwithMax: 0,
+              created_at: item.block.header.time
+            }).catch(e => console.log("ERROR CREATE USER", e))
             await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
@@ -146,7 +147,7 @@ async function createTransaction(deData, time){
         created_at: time,
         memo: deData.memo.toString() ? deData.memo.toString() : '',
         user_id: res.user_id
-      })
+      }).catch(e => console.log("ERROR CREATE TRANSACTION", e))
     }
   })
 }
@@ -306,8 +307,8 @@ async function updateFollowing(arr, user_id){
       where: {
           user_id: id
         }
-      })
-    })
+      }).catch(e => console.log("ERROR UPDATE", e))
+    }).catch(e => console.log("ERROR FIND", e))
   })
 }
 
@@ -327,8 +328,8 @@ async function updateFollower(arr, user_id){
         where: {
           user_id: id
         }
-      })
-    })
+      }).catch(e => console.log("ERROR UPDATE", e))
+    }).catch(e => console.log("ERROR FIND", e))
   })
 }
 

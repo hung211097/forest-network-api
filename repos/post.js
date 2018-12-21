@@ -25,6 +25,10 @@ exports.getPosts = (query) => {
       limit: query.limit,
       offset: (query.page - 1) * query.limit,
       order: query.order && query.type ? [[query.order, query.type]] : [],
+      include: [{
+        model: user,
+        attributes: ['username', 'user_id', 'avatar']
+      }]
     }).then((data) => {
       return {
         posts: data,
@@ -54,7 +58,11 @@ exports.getPostsWall = (query, user_id) => {
         order: query.order && query.type ? [[query.order, query.type]] : [],
         where:{
           user_id: arrUserID
-        }
+        },
+        include: [{
+          model: user,
+          attributes: ['username', 'user_id', 'avatar']
+        }]
       }).then((posts) => {
         return {
           posts: posts,
@@ -78,7 +86,11 @@ exports.getMyPosts = (query, user_id) => {
       order: query.order && query.type ? [[query.order, query.type]] : [],
       where:{
         user_id: user_id
-      }
+      },
+      include: [{
+        model: user,
+        attributes: ['username', 'user_id', 'avatar']
+      }]
     }).then((posts) => {
       return {
         posts: posts,

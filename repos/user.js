@@ -4,8 +4,11 @@ const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH} = require('../consta
 const moment = require('moment')
 const { RpcClient } = require('tendermint')
 const node_url = require('../settingDev').node_url;
+const full_url = require('../settingDev').node_full_url;
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
+const axios = require('axios');
+const querystring = require('querystring')
 
 exports.getUsers = (query, exceptID) => {
     return user.count({
@@ -160,16 +163,28 @@ exports.getUnfollowedUsers = (query, user_id) => {
   }).catch(e => {return null})
 }
 
-exports.updateProfile = (hex) => {
-  const client = RpcClient(node_url)
-  return client.broadcastTxCommit({tx: hex}).then((res) => {
-    if(+res.height !== 0){
-      return 'success'
-    }
-    return 'failed'
-  }).catch(e => {
-    return 'failed'
-  })
+exports.updateProfile = (key, hex) => {
+  if(key === 'hexImage'){
+    return axios.post(full_url + '/broadcast_tx_commit',
+    querystring.stringify({tx: hex}),
+    {headers: { 'content-type': 'application/x-www-form-urlencoded' }}).then((res) => {
+      if(+res.data.result.height){
+        return 'success'
+      }
+      return 'failed'
+    })
+  }
+  else{
+    const client = RpcClient(node_url)
+    return client.broadcastTxCommit({tx: hex}).then((res) => {
+      if(+res.height !== 0){
+        return 'success'
+      }
+      return 'failed'
+    }).catch(e => {
+      return 'failed'
+    })
+  }
 }
 
 exports.getPublickeyFollowings = (user_id, arr) => {

@@ -97,7 +97,7 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-const server_port = process.env.PORT || 8888;
+const server_port = process.env.PORT || 5500;
 
 const server = app.listen(server_port, function () {
   console.log(`App listening at port ${server_port}`)
