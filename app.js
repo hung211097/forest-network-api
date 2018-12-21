@@ -21,6 +21,7 @@ var createAccountRouter = require('./routes/create-account');
 var followRouter = require('./routes/follow');
 var postRouter = require('./routes/posts');
 var transactionRouter = require('./routes/transactions');
+var postRouter = require('./routes/posts');
 
 var app = express();
 app.use(cors({
@@ -78,6 +79,8 @@ app.use('/create-account', createAccountRouter);
 app.use('/follow', followRouter);
 app.use('/posts', postRouter);
 app.use('/transactions', transactionRouter);
+app.use('/posts', postRouter);
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
