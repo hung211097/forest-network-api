@@ -1,7 +1,24 @@
 var express = require('express');
 var router = express.Router();
-var userRepos = require('../repos/user')
 var postRepos = require('../repos/post')
+var transactionRepos = require('../repos/transaction')
+var userRepos = require('../repos/user')
+
+router.post('/', function(req, res, next) {
+  if(req.body && req.body.TxEncode){
+		transactionRepos.conductTransaction(req.body.TxEncode).then((data) => {
+			return res.status(200).json({
+				status: 'success'
+			})
+		})
+	}
+	else{
+		console.log('fail')
+		return res.status(200).json({
+			status: 'failed'
+		})
+	}
+});
 
 router.get('/', function(req, res, next) {
   let defaultQuery = {
