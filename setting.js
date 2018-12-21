@@ -13,6 +13,7 @@ const setting = {
         ssl: true
     },
   },
+  node_full_url: "https://komodo.forest.network",
   node_url: "https://komodo.forest.network:443",
   node_url_websocket: "wss://komodo.forest.network:443"
 }
