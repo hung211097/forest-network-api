@@ -43,7 +43,7 @@ const FetchData = (newBlock) => {
 const StartWebSocket = () => {
   const client = RpcClient(websocket_url)
   client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
-    // FetchData(err.block)
+    FetchData(err.block)
     console.log(err)
   }).catch(e => console.log("ERROR", e))
 }
@@ -183,7 +183,7 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
       const txSize = Buffer.from(txBase64, 'base64').length
       const currentTime = time
       let diff = BANDWIDTH_PERIOD
-      if(account.bandwithTime && account.sequence !== 1){
+      if(account.bandwithTime){
         if(moment(currentTime).unix() - moment(account.bandwithTime).unix() < BANDWIDTH_PERIOD){
           diff = moment(currentTime).unix() - moment(account.bandwithTime).unix()
         }

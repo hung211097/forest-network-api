@@ -37,7 +37,7 @@ exports.getUsers = (query, exceptID) => {
     })
 }
 
-exports.getUsersFollowing = (query, user_id) => {
+exports.getUsersFollowing = (query, user_id, exceptID) => {
     return user.findOne({
       where:{
         user_id: user_id
@@ -52,7 +52,10 @@ exports.getUsersFollowing = (query, user_id) => {
       }
       return user.count({
         where: {
-          user_id: data.following
+          user_id: {
+            [Op.in]: data.following,
+            [Op.notIn]: [exceptID, +user_id]
+          }
         }
       }).then((quantity) => {
         return user.findAll({
@@ -60,7 +63,10 @@ exports.getUsersFollowing = (query, user_id) => {
           offset: (query.page - 1) * query.limit,
           order: query.order && query.type ? [[query.order, query.type]] : [],
           where: {
-            user_id: data.following
+            user_id: {
+              [Op.in]: data.following,
+              [Op.notIn]: [exceptID, +user_id]
+            }
           }
         }).then((users) => {
           return {
@@ -73,7 +79,7 @@ exports.getUsersFollowing = (query, user_id) => {
     }).catch(e => {return null})
 }
 
-exports.getUsersFollower = (query, user_id) => {
+exports.getUsersFollower = (query, user_id, exceptID) => {
   return user.findOne({
     where:{
       user_id: user_id
@@ -88,7 +94,10 @@ exports.getUsersFollower = (query, user_id) => {
     }
     return user.count({
       where: {
-        user_id: data.follower
+        user_id:{
+          [Op.in]: data.follower,
+          [Op.notIn]: [exceptID, +user_id]
+        }
       }
     }).then((quantity) => {
       return user.findAll({
@@ -96,7 +105,10 @@ exports.getUsersFollower = (query, user_id) => {
         offset: (query.page - 1) * query.limit,
         order: query.order && query.type ? [[query.order, query.type]] : [],
         where: {
-          user_id: data.follower
+          user_id:{
+            [Op.in]: data.follower,
+            [Op.notIn]: [exceptID, +user_id]
+          }
         }
       }).then((users) => {
         return {
