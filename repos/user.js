@@ -52,7 +52,9 @@ exports.getUsersFollowing = (query, user_id) => {
       }
       return user.count({
         where: {
-          user_id: data.following
+          user_id: {
+            [Op.in]: data.following,
+          }
         }
       }).then((quantity) => {
         return user.findAll({
@@ -60,7 +62,9 @@ exports.getUsersFollowing = (query, user_id) => {
           offset: (query.page - 1) * query.limit,
           order: query.order && query.type ? [[query.order, query.type]] : [],
           where: {
-            user_id: data.following
+            user_id: {
+              [Op.in]: data.following,
+            }
           }
         }).then((users) => {
           return {
@@ -88,7 +92,9 @@ exports.getUsersFollower = (query, user_id) => {
     }
     return user.count({
       where: {
-        user_id: data.follower
+        user_id:{
+          [Op.in]: data.follower,
+        }
       }
     }).then((quantity) => {
       return user.findAll({
@@ -96,7 +102,9 @@ exports.getUsersFollower = (query, user_id) => {
         offset: (query.page - 1) * query.limit,
         order: query.order && query.type ? [[query.order, query.type]] : [],
         where: {
-          user_id: data.follower
+          user_id:{
+            [Op.in]: data.follower,
+          }
         }
       }).then((users) => {
         return {

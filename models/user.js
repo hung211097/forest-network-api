@@ -17,12 +17,14 @@ module.exports = (sequelize, DataTypes) => {
       charset: 'utf8',
       collate: 'utf8_unicode_ci',
       tableName: 'Users',
+      timestamps: false
     });
 
     user.associate = (models) => {
       user.hasMany(models.Transactions, {foreignKey: 'user_id'})
       user.hasMany(models.Posts, {foreignKey: 'user_id'})
       user.hasMany(models.Comments, {foreignKey: 'user_id'})
+      user.hasMany(models.Reacts, {foreignKey: 'user_id'})
     }
     return user;
 };

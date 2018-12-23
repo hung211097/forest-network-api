@@ -8,6 +8,7 @@ let objDB = {
   Info: require('../models/infoBC')(db, Sequelize),
   Posts: require('../models/posts')(db, Sequelize),
   Comments: require('../models/comments')(db, Sequelize),
+  Reacts: require('../models/reacts')(db, Sequelize),
 };
 
 Object.keys(objDB).forEach((modelName) => {
