@@ -343,4 +343,42 @@ router.get('/:id/my-posts', function(req, res, next) {
   })
 });
 
+router.post('/search', function(req, res, next) {
+  if(req.query.type && req.query.info){
+    switch (req.query.type){
+			case 'Username':
+				userRepos.getUsersByUsername(req.query.info).then((data) => {
+					if(data){
+						return res.status(200).json({
+							users: data.users,
+							status: 'success'
+						})
+					}
+					return res.status(200).json({
+						status: 'failed'
+					})
+				})
+				break;
+			case 'PublicKey':
+				userRepos.getUsersByPublicKey(req.query.info).then((data) => {
+					if(data){
+						return res.status(200).json({
+							users: data.users,
+							status: 'success'
+						})
+					}
+					return res.status(200).json({
+						status: 'failed'
+					})
+				})
+				break;
+			default: 
+				return res.status(200).json({
+					status: 'failed'
+				})
+		}
+  }
+});
+
+
 module.exports = router;

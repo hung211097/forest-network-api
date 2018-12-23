@@ -221,3 +221,27 @@ exports.checkIfEnoughOXY = (publicKey, txString64, timeNewTransaction) => {
       return true
     }).catch(e => console.log("ERROR FIND USER", e))
 }
+
+exports.getUsersByUsername = (username) => {
+    return user.findAll({
+      where: {
+        username: {
+					[Op.like]: '%'+username+'%'
+        }
+      }
+    }).then((users) => {
+        return {users: users};
+    }).catch(e => {console.log(e);return null})
+}
+
+exports.getUsersByPublicKey = (publicKey) => {
+    return user.findAll({
+      where: {
+        public_key: {
+					[Op.like]: '%'+publicKey+'%'
+        }
+      }
+    }).then((users) => {
+        return {users: users};
+    }).catch(e => {console.log(e);return null})
+}
