@@ -4,11 +4,10 @@ const db = new Sequelize(dbConfig);
 const moment = require('moment');
 const { RpcClient } = require('tendermint')
 const { encode, decode, verify, sign, hash } = require('../lib/transaction')
-const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
+const { decodePost, decodeFollowing, decodeReact, decodeType } = require('../lib/transaction/v1')
 const base32 = require('base32.js');
-const axios = require('axios');
 const transaction = require('../lib/transaction')
-const querystring = require('querystring')
+const chance = require('chance').Chance()
 
 const BANDWIDTH_PERIOD = 86400;
 const MAX_CELLULOSE = 9007199254740991;
@@ -31,6 +30,8 @@ const Users = db.define('Users', {
   bandwithMax: {type: Sequelize.INTEGER, allowNull: false },
   bandwithTime: {type: Sequelize.DATE, allowNull: false },
   created_at: {type: Sequelize.DATE, allowNull: false},
+},{
+  timestamps: false
 })
 
 const Transactions = db.define('Transactions', {
@@ -41,23 +42,39 @@ const Transactions = db.define('Transactions', {
   amount: {type: Sequelize.BIGINT, allowNull: false},
   operation: {type: Sequelize.STRING, allowNull: false},
   memo: {type: Sequelize.TEXT, allowNull: true}
+},{
+  timestamps: false
 })
 
 const Info = db.define('Blockchains', {
   height: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true},
+},{
+  timestamps: false
 })
 
 const Posts = db.define('Posts', {
   id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
   content: {type: Sequelize.TEXT, allowNull: false},
-  likes: {type: Sequelize.ARRAY(Sequelize.INTEGER), allowNull: true, defaultValue: []},
   created_at: {type: Sequelize.DATE, allowNull: false},
+  sequence: {type: Sequelize.INTEGER, allowNull: false},
+  hash: {type: Sequelize.STRING, allowNull: false},
+},{
+  timestamps: false
 })
 
 const Comments = db.define('Comments', {
   id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
   content: {type: Sequelize.TEXT, allowNull: false},
   created_at: {type: Sequelize.DATE, allowNull: false},
+},{
+  timestamps: false
+})
+
+const Reacts = db.define('Reacts', {
+  id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
+  react: {type: Sequelize.INTEGER, allowNull: true, defaultValue: 0},
+},{
+  timestamps: false
 })
 
 
@@ -72,12 +89,14 @@ Comments.belongsTo(Users, {foreignKey: 'user_id'})
 Posts.hasMany(Comments, {foreignKey: 'post_id'})
 Comments.belongsTo(Posts, {foreignKey: 'post_id'})
 
+Posts.hasMany(Reacts, {foreignKey: 'post_id'})
+Users.hasMany(Reacts, {foreignKey: 'user_id'})
+
+const client = RpcClient('https://dragonfly.forest.network:443')
 const FetchData = () => {
-  const client = RpcClient('https://dragonfly.forest.network:443')
   let fromBlock = 0;
   let toBlock;
   client.block().then((res) => {
-    // console.log(res)
     toBlock = +res.block_meta.header.height
     Info.findAll().then((dataHeight) => {
       if(!dataHeight.length){
@@ -88,18 +107,10 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 13501; i <= 13765; i++){ //12001 -> 12150
+    for(let i = 19763; i <= 19763; i++){ //1001 -> 1500, 4001 > 4500 null
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
-      // result.forEach((item) => {
-      //   if(item.block.data.txs){
-      //     const buf = Buffer.from(item.block.data.txs[0], 'base64')
-      //     const deData = decode(buf)
-      //     console.log(deData);
-      //   }
-      // })
-
       startImportDB(result)
     }).catch(e => console.log("ERROR PROMISE", e))
   })
@@ -108,43 +119,6 @@ const FetchData = () => {
 // db.sync();
 
 FetchData()
-
-
-// const fs = require("fs");
-//
-// fs.readFile('avatar.jpg', function(err, data) {
-//   if (err) throw err;
-//   var encodedImage = new Buffer(data, 'binary');
-//   // Encode to base64
-//   console.log(encodedImage);
-//   // Decode from base64
-//   // var decodedImage = new Buffer(encodedImage, 'base64').toString('binary');
-//   const tx = {
-//     version: 1,
-//     sequence: 38,
-//     memo: Buffer.alloc(0),
-//     account: "GBIDPG4BFSTJSR3TYPJG4S4R2MEZX6U6FK5YJVIGD4ZJ3LTM4B5IS4RB",
-//     operation: "update_account",
-//     params: {
-//       key: 'picture',
-//       value: encodedImage
-//     },
-//     signature: new Buffer(64)
-//   }
-//
-//   transaction.sign(tx, "SB5YAIOBU72LC4PTYTEUJOKCN4LWEQDPKKFRQ6NRQMXRG42TMURPRZNA");
-//   let TxEncode = '0x' + transaction.encode(tx).toString('hex');
-//   console.log(querystring);
-//   axios.post('https://komodo.forest.network/broadcast_tx_commit',
-//   querystring.stringify({tx: TxEncode}),
-//   {
-//     headers: { 'content-type': 'application/x-www-form-urlencoded' },
-//   }).then((res) => {
-//     console.log("RESULT", res);
-//   })
-//   // console.log(TxEncode);
-// });
-
 
 // Posts.findAll({
 //   where: {
@@ -157,12 +131,29 @@ FetchData()
 // }).then((res) => {
 //   console.log(res[0].User);
 // })
+// const Sequelize = require('sequelize');
 
-// const client = RpcClient('wss://komodo.forest.network:443')
-// client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
-//   console.log("OK");
-//   console.log(err, event)
-// }).catch(e => console.log("ERROR", e))
+// Posts.findAll({
+//   attributes: ['id', 'content', 'created_at', 'sequence', 'hash', 'user_id', [Sequelize.fn('COUNT', Sequelize.col('Comments.id')), 'number_of_comments']],
+//   where: {
+//     id: 144
+//   },
+//   include:[
+//     {
+//       model: Comments,
+//       attributes: [],
+//     },
+//     {
+//       model: Reacts,
+//       attributes: ['react'],
+//       where:{
+//         user_id: 27
+//       }
+//     },
+//   ],
+//   group: [Sequelize.col('Posts.id'), Sequelize.col('Reacts.id')],
+// }).then((res) => console.log(res))
+
 
 async function asyncForEach(array, callback) {
   for (let index = 0; index < array.length; index++) {
@@ -183,15 +174,15 @@ const startImportDB = async (result) => {
             await Users.create({
               public_key: deData.params.address,
               tendermint_address: '',
-              username: "User " + (index + 1),
+              username: chance.name(),
               sequence: 0,
               bandwithTime: item.block.header.time,
               bandwithMax: 0,
               created_at: item.block.header.time
             })
-            await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await createPost(deData, item.block.header.time)
             break
           case 'payment':
             await createTransaction(deData, item.block.header.time)
@@ -199,9 +190,9 @@ const startImportDB = async (result) => {
             await adjustAmount(deData, true)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], true)
+            await createPost(deData, item.block.header.time)
             break
           case 'update_account':
-            await createTransaction(deData, item.block.header.time)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await Users.update({
               sequence: deData.sequence
@@ -220,11 +211,10 @@ const startImportDB = async (result) => {
                   return
                 }
               }
-              await updateAccount(deData)
+              await updateAccount(deData, item.block.header.time, item.block.data.txs[0])
             }
             break
           case 'post':
-            await createTransaction(deData, item.block.header.time)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await Users.update({
               sequence: deData.sequence
@@ -240,6 +230,31 @@ const startImportDB = async (result) => {
               return
             }
             await createPost(deData, item.block.header.time)
+            break
+          case 'interact':
+            await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await Users.update({
+              sequence: deData.sequence
+            },{
+              where: {
+                public_key: deData.account
+              }
+            }).then(() => {}).catch(e => console.log("ERROR", e))
+
+            let type = decodeType(deData.params.content).type
+            let hashData = await client.tx({hash: '0x' + deData.params.object})
+            let interactData = Buffer.from(hashData.tx, 'base64')
+            interactData = decode(interactData)
+            switch(type){
+              case 1:
+                await createComment(deData, interactData, deData.params.content, item.block.header.time)
+                break
+              case 2:
+                await createReact(deData, interactData, deData.params.content, item.block.header.time)
+                break
+              default:
+                break
+            }
             break
           default:
             break
@@ -299,29 +314,14 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
       const txSize = Buffer.from(txBase64, 'base64').length
       const currentTime = time
       let diff = BANDWIDTH_PERIOD
-      // console.log("CURRENT", moment(currentTime).unix());
-      // console.log("LAST TIME", moment(account.bandwithTime).unix());
-      if(account.bandwithTime && account.sequence !== 1){
-        // console.log("MINUS", moment(currentTime).unix() - moment(account.bandwithTime).unix());
+      if(account.bandwithTime){
         if(moment(currentTime).unix() - moment(account.bandwithTime).unix() < BANDWIDTH_PERIOD){
           diff = moment(currentTime).unix() - moment(account.bandwithTime).unix()
         }
       }
       const bandwidthLimit = Math.floor(account.amount / MAX_CELLULOSE * NETWORK_BANDWIDTH)
       // 24 hours window max 65kB
-      // console.log("ACCOUNT", account);
-      // console.log("DIFF", diff);
-      // console.log("bandwidthLimit", bandwidthLimit);
-      // console.log("TX", txSize);
-
       const bandwidthConsume = Math.ceil(Math.max(0, (BANDWIDTH_PERIOD - diff) / BANDWIDTH_PERIOD) * account.bandwith + txSize)
-
-      // console.log("bandwidthConsume", bandwidthConsume);
-
-      // if (account.bandwidth > bandwidthLimit) {
-      //   return
-      // }
-      // Check bandwidth
       return Users.update({
         bandwithTime: time,
         bandwith: bandwidthConsume,
@@ -349,10 +349,11 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
   }).catch(e => console.log("ERROR FIND USER", e))
 }
 
-async function updateAccount(deData){
+async function updateAccount(deData, time, txBase64){
   switch(deData.params.key)
   {
     case 'name':
+      await createPost(deData, time)
       return Users.update({
         username: deData.params.value.toString('utf8')
       },{
@@ -361,6 +362,7 @@ async function updateAccount(deData){
         }
       }).then(() => {}).catch(e => console.log("ERROR UPDATE NAME", e))
     case 'picture':
+      await createPost(deData, time, {txBase64: txBase64})
       return Users.update({
         avatar: 'data:image/jpeg;base64,' + deData.params.value.toString('base64')
       },{
@@ -405,11 +407,18 @@ async function updateAccount(deData){
             user_id: user.user_id
           }
         })
+        const arrUsernameFollowing = await Users.findAll({
+          where: {
+            user_id: arrRes
+          },
+          attributes: ['username']
+        })
+        await createPost(deData, time, {arrFollowing: arrUsernameFollowing})
 
-        if(arrNewfollow.length){
+        if(arrNewfollow.length){  //Update Follower for other
           await updateFollowing(arrNewfollow, user.user_id)
         }
-        if(arrUnfollow.length){
+        if(arrUnfollow.length){ //Update unfollow for other
           await updateFollower(arrUnfollow, user.user_id)
         }
       })
@@ -470,26 +479,163 @@ async function getListFollow(arrSrc, arrRes){
       }
     }).catch(e => console.log(e))
     // console.log(follow);
-    arrRes.push(follow.user_id)
+    if(follow){
+      arrRes.push(follow.user_id)
+    }
   })
 }
 
-async function createPost(deData, time){
+async function createPost(deData, time, extraData = null){
   return Users.findOne({
     where: {
       public_key: deData.account
     }
-  }).then((user) => {
+  }).then(async (user) => {
     if(user){
-      let content = decodePost(deData.params.content).text
+      let content = ''
+      let strHash = ''
+      let temp = Object.assign({}, deData)
+      let other = null
+      switch(deData.operation){
+        case 'create_account':
+          other = await Users.findOne({
+            where: {
+              public_key: deData.params.address
+            }
+          }).catch(e => console.log("ERROR", e))
+          strHash = transaction.hash(temp)
+          content = `${user.username} creates an account with username ${other.username}`
+          break
+        case 'payment':
+          other = await Users.findOne({
+            where: {
+              public_key: deData.params.address
+            }
+          }).catch(e => console.log("ERROR", e))
+          strHash = transaction.hash(temp)
+          content = `${user.username} transfers ${deData.params.amount} CEL to ${other.username}`
+          break
+        case 'post':
+          temp.params.content = decodePost(temp.params.content)
+          strHash = transaction.hash(temp)
+          content = temp.params.content.text
+          break
+        case 'update_account':
+          switch(deData.params.key){
+            case 'name':
+              strHash = transaction.hash(temp)
+              content = `${user.username} updated username to ${deData.params.value.toString('utf8')}`
+              break
+            case 'picture':
+              strHash = transaction.hash(temp)
+              content = `${user.username} updated picture with ${Buffer.from(extraData.txBase64, 'base64').length} bytes`
+              break
+            case 'followings':
+              temp.params.value = decodeFollowing(temp.params.value)
+              strHash = transaction.hash(temp)
+              content = `${user.username} is following `
+              if(extraData && extraData.arrFollowing){
+                extraData.arrFollowing.forEach((item, index) => {
+                  if(index !== extraData.arrFollowing.length - 1){
+                    content += (item.dataValues.username + ', ')
+                  }
+                  else{
+                    content += item.dataValues.username
+                  }
+                })
+              }
+              break
+            default:
+              break
+          }
+          break
+        default:
+          break
+      }
       // let content = JSON.parse(deData.params.content.toString('utf8'))
       return Posts.create({
         user_id: user.user_id,
         content: content,
-        created_at: time
+        created_at: time,
+        sequence: deData.sequence,
+        hash: strHash
       }).then(() => {}).catch(e => console.log("ERROR CREATE POST", e))
     }
   }).catch(e => console.log("ERROR", e))
 }
 
+async function createComment(deData, interactData, contentBuf, time){
+  let content = decodePost(contentBuf).text
+  let user = await Users.findOne({
+    where:{
+      public_key: deData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+  let other = await Users.findOne({
+    where:{
+      public_key: interactData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+  let post = await Posts.findOne({
+    where: {
+      user_id: other.user_id,
+      sequence: interactData.sequence
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+
+  if(post){
+    await Comments.create({
+      content: content,
+      created_at: time,
+      user_id: user.user_id,
+      post_id: post.id
+    })
+  }
+}
+
+async function createReact(deData, interactData, contentBuf, time){
+  let reaction = decodeReact(contentBuf).reaction
+  let user = await Users.findOne({
+    where:{
+      public_key: deData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+
+  let other = await Users.findOne({
+    where:{
+      public_key: interactData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+
+  let post = await Posts.findOne({
+    where: {
+      user_id: other.user_id,
+      sequence: interactData.sequence
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+  if(post){
+    let exist = await Reacts.findOne({
+      where:{
+        post_id: post.id,
+        user_id: user.user_id
+      }
+    }).catch(e => console.log("ERROR FIND", e))
+    if(exist){
+      Reacts.update({
+        react: reaction
+      },{
+        where:{
+          id: exist.id
+        }
+      }).catch(e => console.log("ERROR UPDATE REACTION", e))
+    }
+    else{
+      await Reacts.create({
+        react: reaction,
+        user_id: user.user_id,
+        post_id: post.id
+      })
+    }
+  }
+}
 module.exports = db;

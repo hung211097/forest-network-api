@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       charset: 'utf8',
       collate: 'utf8_unicode_ci',
       tableName: 'Comments',
+      timestamps: false
     });
 
     comments.associate = (models) => {
