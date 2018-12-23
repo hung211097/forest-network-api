@@ -253,3 +253,17 @@ exports.getUsersByPublicKey = (publicKey) => {
         return {users: users};
     }).catch(e => {console.log(e);return null})
 }
+
+exports.getUserByUsername = (username) => {
+  return user.findOne({
+    where: {
+      username: {
+        [Op.eq]: username
+      }
+    }
+  }).then((user) => {
+      return {
+        user: user,
+      };
+    }).catch(e => {return null})
+}

@@ -381,4 +381,18 @@ router.post('/search', function(req, res, next) {
 });
 
 
+router.post('/public-key', function(req, res, next) {
+  userRepos.getUserByUsername(req.body.data).then((data) => {
+    if(data){
+     return res.status(200).json({
+       user: data.user,
+       status: 'success'
+     })
+   }
+   return res.status(200).json({
+     status: 'failed'
+   })
+  })
+});
+
 module.exports = router;
