@@ -216,7 +216,7 @@ router.get('/:id/followings', function(req, res, next) {
       defaultQuery.type = type
     }
   }
-  userRepos.getUsersFollowing(defaultQuery, id, +req.session.user_id).then((data) => {
+  userRepos.getUsersFollowing(defaultQuery, id).then((data) => {
     if(data){
       return res.status(200).json({
         length: data.length,
@@ -253,7 +253,7 @@ router.get('/:id/followers', function(req, res, next) {
       defaultQuery.type = type
     }
   }
-  userRepos.getUsersFollower(defaultQuery, id, +req.session.user_id).then((data) => {
+  userRepos.getUsersFollower(defaultQuery, id).then((data) => {
     if(data){
       return res.status(200).json({
         length: data.length,

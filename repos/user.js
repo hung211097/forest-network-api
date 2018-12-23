@@ -37,7 +37,7 @@ exports.getUsers = (query, exceptID) => {
     })
 }
 
-exports.getUsersFollowing = (query, user_id, exceptID) => {
+exports.getUsersFollowing = (query, user_id) => {
     return user.findOne({
       where:{
         user_id: user_id
@@ -54,7 +54,6 @@ exports.getUsersFollowing = (query, user_id, exceptID) => {
         where: {
           user_id: {
             [Op.in]: data.following,
-            [Op.notIn]: [exceptID, +user_id]
           }
         }
       }).then((quantity) => {
@@ -65,7 +64,6 @@ exports.getUsersFollowing = (query, user_id, exceptID) => {
           where: {
             user_id: {
               [Op.in]: data.following,
-              [Op.notIn]: [exceptID, +user_id]
             }
           }
         }).then((users) => {
@@ -79,7 +77,7 @@ exports.getUsersFollowing = (query, user_id, exceptID) => {
     }).catch(e => {return null})
 }
 
-exports.getUsersFollower = (query, user_id, exceptID) => {
+exports.getUsersFollower = (query, user_id) => {
   return user.findOne({
     where:{
       user_id: user_id
@@ -96,7 +94,6 @@ exports.getUsersFollower = (query, user_id, exceptID) => {
       where: {
         user_id:{
           [Op.in]: data.follower,
-          [Op.notIn]: [exceptID, +user_id]
         }
       }
     }).then((quantity) => {
@@ -107,7 +104,6 @@ exports.getUsersFollower = (query, user_id, exceptID) => {
         where: {
           user_id:{
             [Op.in]: data.follower,
-            [Op.notIn]: [exceptID, +user_id]
           }
         }
       }).then((users) => {
