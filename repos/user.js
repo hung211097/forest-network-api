@@ -229,3 +229,17 @@ exports.checkIfEnoughOXY = (publicKey, txString64, timeNewTransaction) => {
       return true
     }).catch(e => console.log("ERROR FIND USER", e))
 }
+
+exports.getUsersByUsername = (username) => {
+  return user.findOne({
+    where: {
+      username: {
+        [Op.eq]: username
+      }
+    }
+  }).then((user) => {
+      return {
+        user: user,
+      };
+    }).catch(e => {return null})
+}
