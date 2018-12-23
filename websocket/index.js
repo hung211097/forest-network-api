@@ -16,9 +16,9 @@ const Posts = db.Posts;
 const Comments = db.Comments;
 const Follows = db.Follows;
 
+const fetch = RpcClient(node_url)
 const FetchData = (newBlock) => {
   console.log("BEGIN ADD NEW DATA");
-  const fetch = RpcClient(node_url)
   let fromBlock = 0;
   let toBlock = +newBlock.header.height;
 
@@ -72,10 +72,10 @@ const startImportDB = async (result) => {
               bandwithTime: item.block.header.time,
               bandwithMax: 0,
               created_at: item.block.header.time
-            }).catch(e => console.log("ERROR CREATE USER", e))
-            await createTransaction(deData, item.block.header.time)
+            })
             await adjustAmount(deData, false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await createPost(deData, item.block.header.time)
             break
           case 'payment':
             await createTransaction(deData, item.block.header.time)
@@ -83,9 +83,9 @@ const startImportDB = async (result) => {
             await adjustAmount(deData, true)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], true)
+            await createPost(deData, item.block.header.time)
             break
           case 'update_account':
-            await createTransaction(deData, item.block.header.time)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await Users.update({
               sequence: deData.sequence
@@ -104,11 +104,10 @@ const startImportDB = async (result) => {
                   return
                 }
               }
-              await updateAccount(deData)
+              await updateAccount(deData, item.block.header.time, item.block.data.txs[0])
             }
             break
           case 'post':
-            await createTransaction(deData, item.block.header.time)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await Users.update({
               sequence: deData.sequence
@@ -124,6 +123,31 @@ const startImportDB = async (result) => {
               return
             }
             await createPost(deData, item.block.header.time)
+            break
+          case 'interact':
+            await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
+            await Users.update({
+              sequence: deData.sequence
+            },{
+              where: {
+                public_key: deData.account
+              }
+            }).then(() => {}).catch(e => console.log("ERROR", e))
+
+            let type = decodeType(deData.params.content).type
+            let hashData = await client.tx({hash: '0x' + deData.params.object})
+            let interactData = Buffer.from(hashData.tx, 'base64')
+            interactData = decode(interactData)
+            switch(type){
+              case 1:
+                await createComment(deData, interactData, deData.params.content, item.block.header.time)
+                break
+              case 2:
+                await createReact(deData, interactData, deData.params.content, item.block.header.time)
+                break
+              default:
+                break
+            }
             break
           default:
             break
@@ -147,7 +171,7 @@ async function createTransaction(deData, time){
         created_at: time,
         memo: deData.memo.toString() ? deData.memo.toString() : '',
         user_id: res.user_id
-      }).catch(e => console.log("ERROR CREATE TRANSACTION", e))
+      })
     }
   })
 }
@@ -183,16 +207,14 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
       const txSize = Buffer.from(txBase64, 'base64').length
       const currentTime = time
       let diff = BANDWIDTH_PERIOD
-      if(account.bandwithTime && account.sequence !== 1){
+      if(account.bandwithTime){
         if(moment(currentTime).unix() - moment(account.bandwithTime).unix() < BANDWIDTH_PERIOD){
           diff = moment(currentTime).unix() - moment(account.bandwithTime).unix()
         }
       }
       const bandwidthLimit = Math.floor(account.amount / MAX_CELLULOSE * NETWORK_BANDWIDTH)
       // 24 hours window max 65kB
-
       const bandwidthConsume = Math.ceil(Math.max(0, (BANDWIDTH_PERIOD - diff) / BANDWIDTH_PERIOD) * account.bandwith + txSize)
-      // Check bandwidth
       return Users.update({
         bandwithTime: time,
         bandwith: bandwidthConsume,
@@ -220,10 +242,11 @@ async function adjustBandwith(deData, time, txBase64, isCreate){
   }).catch(e => console.log("ERROR FIND USER", e))
 }
 
-async function updateAccount(deData){
+async function updateAccount(deData, time, txBase64){
   switch(deData.params.key)
   {
     case 'name':
+      await createPost(deData, time)
       return Users.update({
         username: deData.params.value.toString('utf8')
       },{
@@ -232,6 +255,7 @@ async function updateAccount(deData){
         }
       }).then(() => {}).catch(e => console.log("ERROR UPDATE NAME", e))
     case 'picture':
+      await createPost(deData, time, {txBase64: txBase64})
       return Users.update({
         avatar: 'data:image/jpeg;base64,' + deData.params.value.toString('base64')
       },{
@@ -276,11 +300,18 @@ async function updateAccount(deData){
             user_id: user.user_id
           }
         })
+        const arrUsernameFollowing = await Users.findAll({
+          where: {
+            user_id: arrRes
+          },
+          attributes: ['username']
+        })
+        await createPost(deData, time, {arrFollowing: arrUsernameFollowing})
 
-        if(arrNewfollow.length){
+        if(arrNewfollow.length){  //Update Follower for other
           await updateFollowing(arrNewfollow, user.user_id)
         }
-        if(arrUnfollow.length){
+        if(arrUnfollow.length){ //Update unfollow for other
           await updateFollower(arrUnfollow, user.user_id)
         }
       })
@@ -307,8 +338,8 @@ async function updateFollowing(arr, user_id){
       where: {
           user_id: id
         }
-      }).catch(e => console.log("ERROR UPDATE", e))
-    }).catch(e => console.log("ERROR FIND", e))
+      })
+    })
   })
 }
 
@@ -328,8 +359,8 @@ async function updateFollower(arr, user_id){
         where: {
           user_id: id
         }
-      }).catch(e => console.log("ERROR UPDATE", e))
-    }).catch(e => console.log("ERROR FIND", e))
+      })
+    })
   })
 }
 
@@ -341,27 +372,163 @@ async function getListFollow(arrSrc, arrRes){
       }
     }).catch(e => console.log(e))
     // console.log(follow);
-    arrRes.push(follow.user_id)
+    if(follow){
+      arrRes.push(follow.user_id)
+    }
   })
 }
 
-async function createPost(deData, time){
+async function createPost(deData, time, extraData = null){
   return Users.findOne({
     where: {
       public_key: deData.account
     }
-  }).then((user) => {
+  }).then(async (user) => {
     if(user){
-      let content = decodePost(deData.params.content).text
-      // let content = JSON.parse(deData.params.content.toString('utf8'))
+      let content = ''
+      let strHash = ''
+      let temp = Object.assign({}, deData)
+      let other = null
+      switch(deData.operation){
+        case 'create_account':
+          other = await Users.findOne({
+            where: {
+              public_key: deData.params.address
+            }
+          }).catch(e => console.log("ERROR", e))
+          strHash = transaction.hash(temp)
+          content = `${user.username} creates an account with username ${other.username}`
+          break
+        case 'payment':
+          other = await Users.findOne({
+            where: {
+              public_key: deData.params.address
+            }
+          }).catch(e => console.log("ERROR", e))
+          strHash = transaction.hash(temp)
+          content = `${user.username} transfers ${deData.params.amount} CEL to ${other.username}`
+          break
+        case 'post':
+          temp.params.content = decodePost(temp.params.content)
+          strHash = transaction.hash(temp)
+          content = temp.params.content.text
+          break
+        case 'update_account':
+          switch(deData.params.key){
+            case 'name':
+              strHash = transaction.hash(temp)
+              content = `${user.username} updated username to ${deData.params.value.toString('utf8')}`
+              break
+            case 'picture':
+              strHash = transaction.hash(temp)
+              content = `${user.username} updated picture with ${Buffer.from(extraData.txBase64, 'base64').length} bytes`
+              break
+            case 'followings':
+              temp.params.value = decodeFollowing(temp.params.value)
+              strHash = transaction.hash(temp)
+              content = `${user.username} is following `
+              if(extraData && extraData.arrFollowing){
+                extraData.arrFollowing.forEach((item, index) => {
+                  if(index !== extraData.arrFollowing.length - 1){
+                    content += (item.dataValues.username + ', ')
+                  }
+                  else{
+                    content += item.dataValues.username
+                  }
+                })
+              }
+              break
+            default:
+              break
+          }
+          break
+        default:
+          break
+      }
       return Posts.create({
         user_id: user.user_id,
         content: content,
-        created_at: time
+        created_at: time,
+        sequence: deData.sequence,
+        hash: strHash
       }).then(() => {}).catch(e => console.log("ERROR CREATE POST", e))
     }
   }).catch(e => console.log("ERROR", e))
 }
 
+async function createComment(deData, interactData, contentBuf, time){
+  let content = decodePost(contentBuf).text
+  let user = await Users.findOne({
+    where:{
+      public_key: deData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+  let other = await Users.findOne({
+    where:{
+      public_key: interactData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+  let post = await Posts.findOne({
+    where: {
+      user_id: other.user_id,
+      sequence: interactData.sequence
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+
+  if(post){
+    await Comments.create({
+      content: content,
+      created_at: time,
+      user_id: user.user_id,
+      post_id: post.id
+    })
+  }
+}
+
+async function createReact(deData, interactData, contentBuf, time){
+  let reaction = decodeReact(contentBuf).reaction
+  let user = await Users.findOne({
+    where:{
+      public_key: deData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+
+  let other = await Users.findOne({
+    where:{
+      public_key: interactData.account
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+
+  let post = await Posts.findOne({
+    where: {
+      user_id: other.user_id,
+      sequence: interactData.sequence
+    }
+  }).catch(e => console.log("ERROR FIND", e))
+  if(post){
+    let exist = await Reacts.findOne({
+      where:{
+        post_id: post.id,
+        user_id: user.user_id
+      }
+    }).catch(e => console.log("ERROR FIND", e))
+    if(exist){
+      Reacts.update({
+        react: reaction
+      },{
+        where:{
+          id: exist.id
+        }
+      }).catch(e => console.log("ERROR UPDATE REACTION", e))
+    }
+    else{
+      await Reacts.create({
+        react: reaction,
+        user_id: user.user_id,
+        post_id: post.id
+      })
+    }
+  }
+}
 
 module.exports = StartWebSocket;
