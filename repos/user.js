@@ -231,6 +231,30 @@ exports.checkIfEnoughOXY = (publicKey, txString64, timeNewTransaction) => {
 }
 
 exports.getUsersByUsername = (username) => {
+    return user.findAll({
+      where: {
+        username: {
+					[Op.like]: '%'+username+'%'
+        }
+      }
+    }).then((users) => {
+        return {users: users};
+    }).catch(e => {console.log(e);return null})
+}
+
+exports.getUsersByPublicKey = (publicKey) => {
+    return user.findAll({
+      where: {
+        public_key: {
+					[Op.like]: '%'+publicKey+'%'
+        }
+      }
+    }).then((users) => {
+        return {users: users};
+    }).catch(e => {console.log(e);return null})
+}
+
+exports.getUserByUsername = (username) => {
   return user.findOne({
     where: {
       username: {
