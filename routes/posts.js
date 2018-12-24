@@ -107,4 +107,49 @@ router.get('/:id/reacts', function(req, res, next) {
   })
 });
 
+router.get('/:id/hash', function(req, res, next) {
+  let post_id = req.params.id
+  postRepos.getHashPost(post_id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        hash: data.hash,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
+  })
+});
+
+router.post('/createcomment', function(req, res, next) {
+  if(req.body && req.body.TxEncode){
+    transactionRepos.conductTransaction(req.body.TxEncode).then((data) => {
+      return res.status(200).json({
+        status: 'success'
+      })
+    })
+  }
+  else{
+    return res.status(200).json({
+      status: 'failed'
+    })
+  }
+});
+
+router.post('/createreact', function(req, res, next) {
+  if(req.body && req.body.TxEncode){
+    transactionRepos.conductTransaction(req.body.TxEncode).then((data) => {
+      return res.status(200).json({
+        status: 'success'
+      })
+    })
+  }
+  else{
+    return res.status(200).json({
+      status: 'failed'
+    })
+  }
+});
+
 module.exports = router;
