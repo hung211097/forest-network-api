@@ -107,7 +107,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 19763; i <= 19763; i++){ //1001 -> 1500, 4001 > 4500 null
+    for(let i = 24501; i <= 24589; i++){ //1001 -> 1500, 4001 > 4500 null
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -393,6 +393,8 @@ async function updateAccount(deData, time, txBase64){
               return filterItem !== item
             })
           })
+        }
+        if(arrRes.length){
           arrRes.forEach((item) => {
             arrUnfollow = arrUnfollow.filter((filterItem) => {
               return filterItem !== item
@@ -534,7 +536,7 @@ async function createPost(deData, time, extraData = null){
               temp.params.value = decodeFollowing(temp.params.value)
               strHash = transaction.hash(temp)
               content = `${user.username} is following `
-              if(extraData && extraData.arrFollowing){
+              if(extraData && extraData.arrFollowing.length){
                 extraData.arrFollowing.forEach((item, index) => {
                   if(index !== extraData.arrFollowing.length - 1){
                     content += (item.dataValues.username + ', ')
@@ -543,6 +545,9 @@ async function createPost(deData, time, extraData = null){
                     content += item.dataValues.username
                   }
                 })
+              }
+              else if(extraData && !extraData.arrFollowing.length){
+                content = `${user.username} unfollows all`
               }
               break
             default:
@@ -565,7 +570,13 @@ async function createPost(deData, time, extraData = null){
 }
 
 async function createComment(deData, interactData, contentBuf, time){
-  let content = decodePost(contentBuf).text
+  let content = ''
+  try{
+    content = decodePost(contentBuf).text
+  }
+  catch(e){
+    return
+  }
   let user = await Users.findOne({
     where:{
       public_key: deData.account
@@ -594,7 +605,14 @@ async function createComment(deData, interactData, contentBuf, time){
 }
 
 async function createReact(deData, interactData, contentBuf, time){
-  let reaction = decodeReact(contentBuf).reaction
+  let reaction = 0
+  try{
+    reaction = decodeReact(contentBuf).reaction
+  }
+  catch(e){
+    return
+  }
+
   let user = await Users.findOne({
     where:{
       public_key: deData.account

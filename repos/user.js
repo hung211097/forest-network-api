@@ -234,7 +234,7 @@ exports.getUsersByUsername = (username) => {
     return user.findAll({
       where: {
         username: {
-					[Op.like]: '%'+username+'%'
+          [Op.like]: '%'+username+'%'
         }
       }
     }).then((users) => {
@@ -246,7 +246,7 @@ exports.getUsersByPublicKey = (publicKey) => {
     return user.findAll({
       where: {
         public_key: {
-					[Op.like]: '%'+publicKey+'%'
+          [Op.like]: '%'+publicKey+'%'
         }
       }
     }).then((users) => {

@@ -1,11 +1,11 @@
 const db = require('../config/config');
 const moment = require('moment');
 const { RpcClient } = require('tendermint')
-const { encode, decode, verify, sign, hash } = require('../lib/transaction')
+const transaction = require('../lib/transaction')
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH } = require('../constants')
 const websocket_url = require('../settingDev').node_url_websocket;
 const node_url = require('../settingDev').node_url;
-const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
+const { decodePost, decodeFollowing, decodeReact, decodeType } = require('../lib/transaction/v1')
 const base32 = require('base32.js');
 const chance = require('chance').Chance()
 
@@ -43,7 +43,7 @@ const FetchData = (newBlock) => {
 const StartWebSocket = () => {
   const client = RpcClient(websocket_url)
   client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
-    // FetchData(err.block)
+    FetchData(err.block)
     console.log(err)
   }).catch(e => console.log("ERROR", e))
 }
@@ -135,7 +135,7 @@ const startImportDB = async (result) => {
             }).then(() => {}).catch(e => console.log("ERROR", e))
 
             let type = decodeType(deData.params.content).type
-            let hashData = await client.tx({hash: '0x' + deData.params.object})
+            let hashData = await fetch.tx({hash: '0x' + deData.params.object})
             let interactData = Buffer.from(hashData.tx, 'base64')
             interactData = decode(interactData)
             switch(type){
@@ -286,6 +286,8 @@ async function updateAccount(deData, time, txBase64){
               return filterItem !== item
             })
           })
+        }
+        if(arrRes.length){
           arrRes.forEach((item) => {
             arrUnfollow = arrUnfollow.filter((filterItem) => {
               return filterItem !== item
@@ -427,7 +429,7 @@ async function createPost(deData, time, extraData = null){
               temp.params.value = decodeFollowing(temp.params.value)
               strHash = transaction.hash(temp)
               content = `${user.username} is following `
-              if(extraData && extraData.arrFollowing){
+              if(extraData && extraData.arrFollowing.length){
                 extraData.arrFollowing.forEach((item, index) => {
                   if(index !== extraData.arrFollowing.length - 1){
                     content += (item.dataValues.username + ', ')
@@ -436,6 +438,9 @@ async function createPost(deData, time, extraData = null){
                     content += item.dataValues.username
                   }
                 })
+              }
+              else if(extraData && !extraData.arrFollowing.length){
+                content = `${user.username} unfollows all`
               }
               break
             default:
@@ -457,7 +462,13 @@ async function createPost(deData, time, extraData = null){
 }
 
 async function createComment(deData, interactData, contentBuf, time){
-  let content = decodePost(contentBuf).text
+  let content = ''
+  try{
+    content = decodePost(contentBuf).text
+  }
+  catch(e){
+    return
+  }
   let user = await Users.findOne({
     where:{
       public_key: deData.account
@@ -486,7 +497,13 @@ async function createComment(deData, interactData, contentBuf, time){
 }
 
 async function createReact(deData, interactData, contentBuf, time){
-  let reaction = decodeReact(contentBuf).reaction
+  let reaction = 0
+  try{
+    reaction = decodeReact(contentBuf).reaction
+  }
+  catch(e){
+    return
+  }
   let user = await Users.findOne({
     where:{
       public_key: deData.account
