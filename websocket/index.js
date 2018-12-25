@@ -5,7 +5,7 @@ const transaction = require('../lib/transaction')
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH } = require('../constants')
 const websocket_url = require('../settingDev').node_url_websocket;
 const node_url = require('../settingDev').node_url;
-const { decodePost, decodeFollowing } = require('../lib/transaction/v1')
+const { decodePost, decodeFollowing, decodeReact, decodeType } = require('../lib/transaction/v1')
 const base32 = require('base32.js');
 const chance = require('chance').Chance()
 
