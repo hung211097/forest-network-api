@@ -150,3 +150,13 @@ exports.getReacts = (post_id, user_id) => {
     }).catch(e => {return null})
   }).catch(e => {return null})
 }
+
+exports.getHashPost = (post_id) => {
+  return post.findOne({
+    where:{
+      id: post_id
+    }
+  }).then((post) => {
+    return {hash: post.hash}
+  }).catch(e => {return null})
+}
