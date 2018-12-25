@@ -386,13 +386,15 @@ async function updateAccount(deData, time, txBase64){
         await getListFollow (arr, arrRes)
         let arrUnfollow = []
         let arrNewfollow = arrRes.slice()
-        if(user.following && user.following.length && arrRes.length){
+        if(user.following && user.following.length){
           arrUnfollow = user.following.slice()
           user.following.forEach((item) => {
             arrNewfollow = arrNewfollow.filter((filterItem) => {
               return filterItem !== item
             })
           })
+        }
+        if(arrRes.length){
           arrRes.forEach((item) => {
             arrUnfollow = arrUnfollow.filter((filterItem) => {
               return filterItem !== item
