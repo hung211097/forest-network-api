@@ -462,7 +462,13 @@ async function createPost(deData, time, extraData = null){
 }
 
 async function createComment(deData, interactData, contentBuf, time){
-  let content = decodePost(contentBuf).text
+  let content = ''
+  try{
+    content = decodePost(contentBuf).text
+  }
+  catch(e){
+    return
+  }
   let user = await Users.findOne({
     where:{
       public_key: deData.account
@@ -491,7 +497,13 @@ async function createComment(deData, interactData, contentBuf, time){
 }
 
 async function createReact(deData, interactData, contentBuf, time){
-  let reaction = decodeReact(contentBuf).reaction
+  let reaction = 0
+  try{
+    reaction = decodeReact(contentBuf).reaction
+  }
+  catch(e){
+    return
+  }
   let user = await Users.findOne({
     where:{
       public_key: deData.account

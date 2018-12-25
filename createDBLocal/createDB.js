@@ -107,7 +107,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 24081; i <= 24081; i++){ //1001 -> 1500, 4001 > 4500 null
+    for(let i = 24501; i <= 24589; i++){ //1001 -> 1500, 4001 > 4500 null
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -570,7 +570,13 @@ async function createPost(deData, time, extraData = null){
 }
 
 async function createComment(deData, interactData, contentBuf, time){
-  let content = decodePost(contentBuf).text
+  let content = ''
+  try{
+    content = decodePost(contentBuf).text
+  }
+  catch(e){
+    return
+  }
   let user = await Users.findOne({
     where:{
       public_key: deData.account
@@ -599,7 +605,14 @@ async function createComment(deData, interactData, contentBuf, time){
 }
 
 async function createReact(deData, interactData, contentBuf, time){
-  let reaction = decodeReact(contentBuf).reaction
+  let reaction = 0
+  try{
+    reaction = decodeReact(contentBuf).reaction
+  }
+  catch(e){
+    return
+  }
+
   let user = await Users.findOne({
     where:{
       public_key: deData.account
