@@ -1,7 +1,7 @@
 const db = require('../config/config');
 const moment = require('moment');
 const { RpcClient } = require('tendermint')
-const { encode, decode, verify, sign, hash } = require('../lib/transaction')
+const transaction = require('../lib/transaction')
 const { BANDWIDTH_PERIOD, MAX_CELLULOSE, NETWORK_BANDWIDTH } = require('../constants')
 const websocket_url = require('../settingDev').node_url_websocket;
 const node_url = require('../settingDev').node_url;
@@ -43,7 +43,7 @@ const FetchData = (newBlock) => {
 const StartWebSocket = () => {
   const client = RpcClient(websocket_url)
   client.subscribe({ query: "tm.event='NewBlock'" }, (err, event) => {
-    // FetchData(err.block)
+    FetchData(err.block)
     console.log(err)
   }).catch(e => console.log("ERROR", e))
 }
@@ -135,7 +135,7 @@ const startImportDB = async (result) => {
             }).then(() => {}).catch(e => console.log("ERROR", e))
 
             let type = decodeType(deData.params.content).type
-            let hashData = await client.tx({hash: '0x' + deData.params.object})
+            let hashData = await fetch.tx({hash: '0x' + deData.params.object})
             let interactData = Buffer.from(hashData.tx, 'base64')
             interactData = decode(interactData)
             switch(type){
@@ -279,7 +279,7 @@ async function updateAccount(deData, time, txBase64){
         await getListFollow (arr, arrRes)
         let arrUnfollow = []
         let arrNewfollow = arrRes.slice()
-        if(user.following && user.following.length){
+        if(user.following && user.following.length && arrRes.length){
           arrUnfollow = user.following.slice()
           user.following.forEach((item) => {
             arrNewfollow = arrNewfollow.filter((filterItem) => {
@@ -427,7 +427,7 @@ async function createPost(deData, time, extraData = null){
               temp.params.value = decodeFollowing(temp.params.value)
               strHash = transaction.hash(temp)
               content = `${user.username} is following `
-              if(extraData && extraData.arrFollowing){
+              if(extraData && extraData.arrFollowing.length){
                 extraData.arrFollowing.forEach((item, index) => {
                   if(index !== extraData.arrFollowing.length - 1){
                     content += (item.dataValues.username + ', ')
@@ -436,6 +436,9 @@ async function createPost(deData, time, extraData = null){
                     content += item.dataValues.username
                   }
                 })
+              }
+              else if(extraData && !extraData.arrFollowing.length){
+                content = `${user.username} unfollows all`
               }
               break
             default:

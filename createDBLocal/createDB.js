@@ -107,7 +107,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 19763; i <= 19763; i++){ //1001 -> 1500, 4001 > 4500 null
+    for(let i = 24081; i <= 24081; i++){ //1001 -> 1500, 4001 > 4500 null
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -386,7 +386,7 @@ async function updateAccount(deData, time, txBase64){
         await getListFollow (arr, arrRes)
         let arrUnfollow = []
         let arrNewfollow = arrRes.slice()
-        if(user.following && user.following.length){
+        if(user.following && user.following.length && arrRes.length){
           arrUnfollow = user.following.slice()
           user.following.forEach((item) => {
             arrNewfollow = arrNewfollow.filter((filterItem) => {
@@ -534,7 +534,7 @@ async function createPost(deData, time, extraData = null){
               temp.params.value = decodeFollowing(temp.params.value)
               strHash = transaction.hash(temp)
               content = `${user.username} is following `
-              if(extraData && extraData.arrFollowing){
+              if(extraData && extraData.arrFollowing.length){
                 extraData.arrFollowing.forEach((item, index) => {
                   if(index !== extraData.arrFollowing.length - 1){
                     content += (item.dataValues.username + ', ')
@@ -543,6 +543,9 @@ async function createPost(deData, time, extraData = null){
                     content += item.dataValues.username
                   }
                 })
+              }
+              else if(extraData && !extraData.arrFollowing.length){
+                content = `${user.username} unfollows all`
               }
               break
             default:
