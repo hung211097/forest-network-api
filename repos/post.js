@@ -151,6 +151,34 @@ exports.getReacts = (post_id, user_id) => {
   }).catch(e => {return null})
 }
 
+exports.getReactUsers = (query, post_id) => {
+  return react.count({
+    where:{
+      post_id: post_id
+    }
+  }).then((quantity) => {
+    return react.findAll({
+      where:{
+        post_id: post_id
+      },
+      include: [{
+        model: user,
+        attributes: ['user_id', 'username', 'avatar']
+      }],
+      limit: query.limit,
+      offset: (query.page - 1) * query.limit
+    }).then((reacts) => {
+      return {
+        reacts_user: reacts,
+        total_page: quantity % query.limit === 0 ? quantity / query.limit : Math.floor(quantity / query.limit) + 1,
+        total_item: quantity,
+      }
+    }).catch(e => {
+      console.log(e);
+      return null})
+  }).catch(e => {return null})
+}
+
 exports.getHashPost = (post_id) => {
   return post.findOne({
     where:{

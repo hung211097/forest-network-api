@@ -10,5 +10,9 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: false
     });
 
+    react.associate = (models) => {
+      react.belongsTo(models.Users, {foreignKey: 'user_id'})
+      react.belongsTo(models.Posts, {foreignKey: 'post_id'})
+    }
     return react;
 };

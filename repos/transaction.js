@@ -27,7 +27,7 @@ exports.getTransactionsOfUser = (query, public_key) => {
         limit: query.limit,
         offset: (query.page - 1) * query.limit,
         order: query.order && query.type ? [[query.order, query.type]] : [],
-        attributes: ['public_key', 'public_key_received', 'created_at', 'amount', 'operation', 'memo'],
+        attributes: ['public_key', 'public_key_received', 'object', 'created_at', 'amount', 'operation', 'memo'],
         where: {
           [Op.or]: [{public_key: public_key}, {public_key_received: public_key}],
         }

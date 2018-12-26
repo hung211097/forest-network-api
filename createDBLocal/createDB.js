@@ -37,7 +37,8 @@ const Users = db.define('Users', {
 const Transactions = db.define('Transactions', {
   id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
   public_key: {type: Sequelize.STRING, allowNull: false},
-  public_key_received: {type: Sequelize.STRING, allowNull: false},
+  public_key_received: {type: Sequelize.STRING, allowNull: true},
+  object: {type: Sequelize.STRING, allowNull: true},
   created_at: {type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.NOW},
   amount: {type: Sequelize.BIGINT, allowNull: false},
   operation: {type: Sequelize.STRING, allowNull: false},
@@ -107,7 +108,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 24501; i <= 24589; i++){ //1001 -> 1500, 4001 > 4500 null
+    for(let i = 27001; i <= 27600; i++){ //1001 -> 1500, 4001 > 4500 null
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -165,7 +166,8 @@ async function asyncForEach(array, callback) {
 const startImportDB = async (result) => {
   await asyncForEach(result, async (item, index) => {
     if(item.block.data.txs){
-        const buf = Buffer.from(item.block.data.txs[0], 'base64')
+      await asyncForEach(item.block.data.txs, async (block) => {
+        const buf = Buffer.from(block, 'base64')
         const deData = decode(buf)
         console.log(deData);
         switch(deData.operation)
@@ -180,6 +182,7 @@ const startImportDB = async (result) => {
               bandwithMax: 0,
               created_at: item.block.header.time
             })
+            await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
             await createPost(deData, item.block.header.time)
@@ -211,6 +214,7 @@ const startImportDB = async (result) => {
                   return
                 }
               }
+              await createTransaction(deData, item.block.header.time)
               await updateAccount(deData, item.block.header.time, item.block.data.txs[0])
             }
             break
@@ -229,6 +233,7 @@ const startImportDB = async (result) => {
             catch(e){
               return
             }
+            await createTransaction(deData, item.block.header.time)
             await createPost(deData, item.block.header.time)
             break
           case 'interact':
@@ -259,26 +264,110 @@ const startImportDB = async (result) => {
           default:
             break
         }
-      }
+      })
+    }
   })
 }
 
 async function createTransaction(deData, time){
+  let temp = ''
   await Users.findOne({
     where:{
       public_key: deData.account
     }
   }).then((res) => {
     if(res){
-      return Transactions.create({
-        public_key: deData.account,
-        public_key_received: deData.params.address ? deData.params.address : '',
-        amount: deData.params.amount ? deData.params.amount : 0,
-        operation: deData.operation,
-        created_at: time,
-        memo: deData.memo.toString() ? deData.memo.toString() : '',
-        user_id: res.user_id
-      })
+      switch(deData.operation)
+      {
+        case 'create_account':
+          return Transactions.create({
+            public_key: deData.account,
+            public_key_received: deData.params.address ? deData.params.address : '',
+            object: '',
+            amount: deData.params.amount ? deData.params.amount : 0,
+            operation: deData.operation,
+            created_at: time,
+            memo: `Create an account with public key ${deData.params.address}`,
+            user_id: res.user_id
+          })
+          break
+        case 'payment':
+          return Transactions.create({
+            public_key: deData.account,
+            public_key_received: deData.params.address ? deData.params.address : '',
+            object: '',
+            amount: deData.params.amount ? deData.params.amount : 0,
+            operation: deData.operation,
+            created_at: time,
+            memo: deData.memo.toString() ? deData.memo.toString() : '',
+            user_id: res.user_id
+          })
+          break
+        case 'post':
+          return Transactions.create({
+            public_key: deData.account,
+            public_key_received: deData.params.address ? deData.params.address : '',
+            object: '',
+            amount: deData.params.amount ? deData.params.amount : 0,
+            operation: deData.operation,
+            created_at: time,
+            memo: `Create a post`,
+            user_id: res.user_id
+          })
+          break
+        case 'update_account':
+          switch(deData.params.key)
+          {
+            case 'name':
+              temp = `Update username to ${deData.params.value}`
+              break
+            case 'picture':
+              temp = `Update avatar`
+              break
+            case 'following':
+              temp = `Update followings`
+              break
+            default:
+              break
+          }
+          return Transactions.create({
+            public_key: deData.account,
+            public_key_received: deData.params.address ? deData.params.address : '',
+            object: '',
+            amount: deData.params.amount ? deData.params.amount : 0,
+            operation: deData.operation,
+            created_at: time,
+            memo: temp,
+            user_id: res.user_id
+          })
+          break
+        case 'interact':
+          let type = decodeType(deData.params.content).type
+          switch(type)
+          {
+            case 1:
+              temp = 'Comment to a transaction'
+              break
+            case 2:
+              temp = 'React to transaction'
+              break
+            default:
+              break
+          }
+          return Transactions.create({
+            public_key: deData.account,
+            public_key_received: deData.params.address ? deData.params.address : '',
+            object: deData.params.object,
+            amount: deData.params.amount ? deData.params.amount : 0,
+            operation: deData.operation,
+            created_at: time,
+            memo: temp,
+            user_id: res.user_id
+          })
+          break
+        default:
+          break
+      }
     }
   })
 }
@@ -577,6 +666,7 @@ async function createComment(deData, interactData, contentBuf, time){
   catch(e){
     return
   }
+  await createTransaction(deData, time)
   let user = await Users.findOne({
     where:{
       public_key: deData.account
@@ -612,7 +702,7 @@ async function createReact(deData, interactData, contentBuf, time){
   catch(e){
     return
   }
-
+  await createTransaction(deData, time)
   let user = await Users.findOne({
     where:{
       public_key: deData.account
