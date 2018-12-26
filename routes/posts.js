@@ -7,7 +7,7 @@ router.post('/', function(req, res, next) {
   if(req.body && req.body.TxEncode){
     transactionRepos.conductTransaction(req.body.TxEncode).then((data) => {
       return res.status(200).json({
-        status: 'success'
+        status: data
       })
     })
   }
@@ -107,6 +107,31 @@ router.get('/:id/reacts', function(req, res, next) {
   })
 });
 
+router.get('/:id/react-users', function(req, res, next) {
+  let post_id = req.params.id
+  let defaultQuery = {
+    page: 1,
+    limit: 10,
+  };
+  if(req.query){
+    defaultQuery.page = req.query.page ? +req.query.page : defaultQuery.page
+    defaultQuery.limit = req.query.limit ? +req.query.limit : defaultQuery.limit
+  }
+  postRepos.getReactUsers(defaultQuery, post_id).then((data) => {
+    if(data){
+      return res.status(200).json({
+        reacts_user: data.reacts_user,
+        total_page: data.total_page,
+        total_item: data.total_item,
+        status: 'success'
+      })
+    }
+    return res.status(200).json({
+      status: 'failed'
+    })
+  })
+});
+
 router.get('/:id/hash', function(req, res, next) {
   let post_id = req.params.id
   postRepos.getHashPost(post_id).then((data) => {
@@ -126,7 +151,7 @@ router.post('/createcomment', function(req, res, next) {
   if(req.body && req.body.TxEncode){
     transactionRepos.conductTransaction(req.body.TxEncode).then((data) => {
       return res.status(200).json({
-        status: 'success'
+        status: data
       })
     })
   }
@@ -141,7 +166,7 @@ router.post('/createreact', function(req, res, next) {
   if(req.body && req.body.TxEncode){
     transactionRepos.conductTransaction(req.body.TxEncode).then((data) => {
       return res.status(200).json({
-        status: 'success'
+        status: data
       })
     })
   }
