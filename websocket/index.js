@@ -16,6 +16,7 @@ const Info = db.Info;
 const Posts = db.Posts;
 const Comments = db.Comments;
 const Follows = db.Follows;
+const Reacts = db.Reacts
 
 const fetch = RpcClient(node_url)
 const FetchData = (newBlock) => {
@@ -32,6 +33,7 @@ const FetchData = (newBlock) => {
     }
 
     let query = []
+    console.log(`FROM ${dataHeight[0].height + 1} TO ${toBlock}`);
     for(let i = dataHeight[0].height + 1; i <= toBlock; i++){
       query.push(fetch.block({height: i}))
     }
