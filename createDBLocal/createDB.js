@@ -19,7 +19,7 @@ const NETWORK_BANDWIDTH = BANDWIDTH_PERIOD * 22020096;
 
 const Users = db.define('Users', {
   user_id: {type: Sequelize.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true},
-  public_key: {type: Sequelize.STRING, allowNull: false, unique: true},
+  public_key: {type: Sequelize.STRING, allowNull: false},
   username: {type: Sequelize.STRING, allowNull: false},
   avatar: {type: Sequelize.TEXT, allowNull: true},
   sequence: {type: Sequelize.INTEGER, allowNull: false},
@@ -108,7 +108,7 @@ const FetchData = () => {
       }
     }).catch(e => console.log("ERROR FIND HEIGHT"))
     let query = []
-    for(let i = 27001; i <= 27600; i++){ //1001 -> 1500, 4001 > 4500 null
+    for(let i = 31501; i <= 31778; i++){ //1001 -> 1500, 4001 > 4500 null
       query.push(client.block({height: i}))
     }
     Promise.all(query).then((result) => {
@@ -181,7 +181,7 @@ const startImportDB = async (result) => {
               bandwithTime: item.block.header.time,
               bandwithMax: 0,
               created_at: item.block.header.time
-            })
+            }).catch(e => console.log(e))
             await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
@@ -289,7 +289,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: `Create an account with public key ${deData.params.address}`,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'payment':
           return Transactions.create({
@@ -301,7 +301,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: deData.memo.toString() ? deData.memo.toString() : '',
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'post':
           return Transactions.create({
@@ -313,7 +313,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: `Create a post`,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'update_account':
           switch(deData.params.key)
@@ -339,7 +339,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: temp,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'interact':
           let type = decodeType(deData.params.content).type
@@ -363,7 +363,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: temp,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         default:
           break

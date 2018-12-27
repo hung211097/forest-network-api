@@ -76,7 +76,7 @@ const startImportDB = async (result) => {
               bandwithTime: item.block.header.time,
               bandwithMax: 0,
               created_at: item.block.header.time
-            })
+            }).catch(e => console.log(e))
             await createTransaction(deData, item.block.header.time)
             await adjustAmount(deData, false)
             await adjustBandwith(deData, item.block.header.time, item.block.data.txs[0], false)
@@ -184,7 +184,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: `Create an account with public key ${deData.params.address}`,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'payment':
           return Transactions.create({
@@ -196,7 +196,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: deData.memo.toString() ? deData.memo.toString() : '',
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'post':
           return Transactions.create({
@@ -208,7 +208,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: `Create a post`,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'update_account':
           switch(deData.params.key)
@@ -234,7 +234,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: temp,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         case 'interact':
           let type = decodeType(deData.params.content).type
@@ -258,7 +258,7 @@ async function createTransaction(deData, time){
             created_at: time,
             memo: temp,
             user_id: res.user_id
-          })
+          }).then(() => {}).catch(e => console.log(e))
           break
         default:
           break
